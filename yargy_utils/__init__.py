@@ -1,9 +1,10 @@
 from yargy import or_, rule, and_
-from yargy.predicates import gram, eq, length_eq, is_capitalized
+from yargy.predicates import gram, eq, length_eq, is_capitalized, type
 from yargy.relations import gnc_relation
 from yargy.tokenizer import MorphTokenizer, EOL
 
 from yargy_utils.id_tokenizer import IdTokenizer
+from yargy_utils.show_result import show_json, show_matches
 
 # для согласования слов
 gnc = gnc_relation()

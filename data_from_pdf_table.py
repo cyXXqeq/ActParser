@@ -1,10 +1,6 @@
 from pdf2docx import Converter
 
 
-def get_borehole_number(text):
-    ...
-
-
 def get_data_from_pdf_table(path):
     # временая статическая переменная
     path = '/home/cyxxqeq/Data4ActParser/ВДС_Размеченные_акты/AKT_KRS_1255_ДН.pdf'
