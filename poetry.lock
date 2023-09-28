@@ -194,6 +194,27 @@ test = ["pretend", "pytest (>=6.2.0)", "pytest-benchmark", "pytest-cov", "pytest
 test-randomorder = ["pytest-randomly"]
 
 [[package]]
+name = "dawg-python"
+version = "0.7.2"
+description = "Pure-python reader for DAWGs (DAFSAs) created by dawgdic C++ library or DAWG Python extension."
+optional = false
+python-versions = "*"
+files = [
+    {file = "DAWG-Python-0.7.2.tar.gz", hash = "sha256:4a5e3286e6261cca02f205cfd5516a7ab10190fa30c51c28d345808f595e3421"},
+    {file = "DAWG_Python-0.7.2-py2.py3-none-any.whl", hash = "sha256:4941d5df081b8d6fcb4597e073a9f60d5c1ccc9d17cd733e8744d7ecfec94ef3"},
+]
+
+[[package]]
+name = "docopt"
+version = "0.6.2"
+description = "Pythonic argument parser, that will make you smile"
+optional = false
+python-versions = "*"
+files = [
+    {file = "docopt-0.6.2.tar.gz", hash = "sha256:49b3a825280bd66b3aa83585ef59c4a8c82f2c8a522dbe754a8bc8d08c85c491"},
+]
+
+[[package]]
 name = "fire"
 version = "0.5.0"
 description = "A library for automatically generating command line interfaces."
@@ -629,6 +650,36 @@ files = [
 ]
 
 [[package]]
+name = "pymorphy2"
+version = "0.9.1"
+description = "Morphological analyzer (POS tagger + inflection engine) for Russian language."
+optional = false
+python-versions = "*"
+files = [
+    {file = "pymorphy2-0.9.1-py3-none-any.whl", hash = "sha256:a5224ec153cd6920a33961ae636793ad5185143bc8045b3f9a9f8bd62ecacf68"},
+    {file = "pymorphy2-0.9.1.tar.gz", hash = "sha256:86c447157dee2eb2341efbe4538e1281a754756ba1aa32da77a89614c58b560c"},
+]
+
+[package.dependencies]
+dawg-python = ">=0.7.1"
+docopt = ">=0.6"
+pymorphy2-dicts-ru = ">=2.4,<3.0"
+
+[package.extras]
+fast = ["DAWG (>=0.8)"]
+
+[[package]]
+name = "pymorphy2-dicts-ru"
+version = "2.4.417127.4579844"
+description = "Russian dictionaries for pymorphy2"
+optional = false
+python-versions = "*"
+files = [
+    {file = "pymorphy2-dicts-ru-2.4.417127.4579844.tar.gz", hash = "sha256:78cad03adca605021abd387a3b2eb515c851b86e94682a1ef2354a2c74fcc196"},
+    {file = "pymorphy2_dicts_ru-2.4.417127.4579844-py2.py3-none-any.whl", hash = "sha256:9a322a6ee78fd4a5dceead0545c24b9a91687ad5df95cbac1b36f6c36cbb498a"},
+]
+
+[[package]]
 name = "pymupdf"
 version = "1.23.4"
 description = "A high performance Python library for data extraction, analysis, conversion & manipulation of PDF (and other) documents."
@@ -775,7 +826,21 @@ files = [
     {file = "tzdata-2023.3.tar.gz", hash = "sha256:11ef1e08e54acb0d4f95bdb1be05da659673de4acbd21bf9c69e94cc5e907a3a"},
 ]
 
+[[package]]
+name = "yargy"
+version = "0.16.0"
+description = "Rule-based facts extraction for Russian language"
+optional = false
+python-versions = "*"
+files = [
+    {file = "yargy-0.16.0-py3-none-any.whl", hash = "sha256:7ca469fa47b336367fab49e8f33ccc195584f69ab758e8196f2fdaa7492adf22"},
+    {file = "yargy-0.16.0.tar.gz", hash = "sha256:c917eefb32a40c23c46b6ca88d68927072dd00ab94e90fd5dc6ab0a62b59b593"},
+]
+
+[package.dependencies]
+pymorphy2 = "*"
+
 [metadata]
 lock-version = "2.0"
 python-versions = "3.11.5"
-content-hash = "7724472a491916256ac05870d857a8e79196ce022e77e566cedbb9a8fa321833"
+content-hash = "d9bcb6fca4073a324b98a9ad6682b5c91b2219691b5182fa44ed82dc109074f2"
