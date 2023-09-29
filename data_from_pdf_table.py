@@ -2,15 +2,35 @@ from pandas import DataFrame
 from pdf2docx import Converter
 
 
-def get_resource_consumption(tables) -> DataFrame:
+def get_resource_consumption(tables: list[list[list]]) -> DataFrame:
+    """
+    :param tables: Таблицы в формате списка матриц, где матрицы - это список списков
+    :return: DataFrame с данными о материалах, пустой DataFrame, если данные не найдутся
+    """
+
+    start = 0
+    df = DataFrame()
+
     for i, table in enumerate(tables):
         if {'Материал (реагент)', 'Количество'}.issubset(table[0]):
             df = DataFrame(table[1:], columns=table[0])
-            df = df.loc[:, ['Материал (реагент)', 'Плотно сть г/см3', 'Количество']]
-            df = df.replace([''], 'н/д')
-            df = df.fillna(value='н/д')
+            start = i + 1
+            break
 
-            return df
+    if not df.empty:
+        while start < len(tables):
+            if 'Стоимость работ, руб' not in tables[start][0]:
+                for row in tables[start]:
+                    df.loc[len(df)] = row
+                start += 1
+            else:
+                break
+
+        df = df.loc[:, ['Материал (реагент)', 'Плотно сть г/см3', 'Количество']]
+        df = df.replace([''], 'н/д')
+        df = df.fillna(value='н/д')
+
+        return df
 
 
 def get_data_from_pdf_table(path):
