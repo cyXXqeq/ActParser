@@ -63,7 +63,7 @@ def get_well_number(lines) -> int:
 
 def get_data_from_pdf(path):
     # временная статическая переменная
-    path = '/home/cyxxqeq/Data4ActParser/ВДС_Размеченные_акты/AKT_KRS_1255_ДН.pdf'
+    path = '/home/cyxxqeq/Data4ActParser/ВДС_Размеченные_акты/AKT_KRS_5702_АН.pdf'
 
     pdf = pdfplumber.open(path)
     p0 = pdf.pages[0]
@@ -71,8 +71,6 @@ def get_data_from_pdf(path):
         layout=True,
         use_text_flow=True
     )
-
-    print(text_act)
 
     lines = text_act.split('\n')
 
