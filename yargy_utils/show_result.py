@@ -8,7 +8,7 @@ import json
 
 
 # подчёркивает конструкции, соответствующие правилу
-def show_matches(rule, *lines):
+def show_matches(rule, lines):
     parser = Parser(rule)
     for line in lines:
         matches = parser.findall(line)
