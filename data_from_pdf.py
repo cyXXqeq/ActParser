@@ -15,25 +15,26 @@ def show_from_act(my_rule, lines):
         show_json(fact.as_json)
 
 
-def get_field_value(my_rule, text):
+def get_field_value(my_rule, lines, all=False, remainder=False):
     parser = Parser(my_rule)
-    matches = list(parser.findall(text))
-    if matches:
-        match = matches[0]
-        fact = match.fact
-        return fact
+    result = []
 
-
-def get_field_value_second(my_rule, lines):
-    parser = Parser(my_rule)
     for line in lines:
         line = line.strip()
         match = list(parser.findall(line))
+
         if line is not None and len(line) and len(match):
             fact = match[0].fact
-            # fact.value = line.replace(fact.field_name, '').strip()
-            # print('fact', fact)
-            return fact
+
+            if remainder:
+                fact.value = line.replace(fact.field_name, '').strip()
+
+            if all:
+                result.append(fact)
+            else:
+                return fact
+
+    return result
 
 
 def get_well_number(lines) -> int:
