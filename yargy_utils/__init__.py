@@ -21,8 +21,11 @@ PREP = gram('PREP')
 CONJ = gram('CONJ')
 # запятая
 COMMA = eq(',')
+# точка
+DOT = eq('.')
 # число
 INT = type('INT')
+FLOAT = rule(INT, or_(COMMA, DOT), INT)
 # разделитель в виде союза или знака препинания
 SEPARATOR = or_(COMMA, CONJ)
 # точка
@@ -36,8 +39,7 @@ DECIMAL = rule(INT,
                or_(COMMA, DOT),
                INT)
 COLON = eq(':')
-# любой токен (не работает)
-POST = gram('POST')
+EQUAL_SIGN = eq('=')
 # аббревиатура
 ABBR = and_(
     length_eq(3),
