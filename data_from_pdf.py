@@ -6,7 +6,8 @@ from yargy.predicates import eq
 
 # from yargy.predicates import caseless
 
-from yargy_utils import NUMERO_SIGN, show_json, INT, PREP, show_matches, COLON, EQUAL_SIGN, PERCENT, DOT, COMMA, FLOAT
+from yargy_utils import NUMERO_SIGN, show_json, INT, PREP, show_matches, COLON, EQUAL_SIGN, PERCENT, DOT, COMMA, \
+    UNIT, DECIMAL, VOLUME, DASH, OPEN_BRACKET, CLOSE_BRACKET
 
 
 def show_from_act(my_rule, lines):
@@ -106,16 +107,12 @@ def get_injectivity(lines):
     return result
 
 
-def get_uploading(lines):
+def get_process_solution(lines):
     """
 
     :param lines:
     :return:
     """
-
-    # uploading_word = morph_pipeline(['закачать'])
-    unit_word = morph_pipeline(['м3', 'м3/сут', 'атм', 'тн'])
-    volume_word = morph_pipeline(['объем'])
 
     ProcessSolution = fact(
         'ProcessSolution',
@@ -128,12 +125,14 @@ def get_uploading(lines):
         morph_pipeline(['раствор']),
         morph_pipeline(['ВДС']).optional(),
         PREP,
-        volume_word,
-        rule(INT, unit_word).interpretation(ProcessSolution.value)
+        VOLUME,
+        rule(INT, UNIT).interpretation(ProcessSolution.value)
     ).interpretation(ProcessSolution)
 
-    # show_matches(process_solution_rule, lines)
+    show_matches(process_solution_rule, lines)
 
+
+def get_cycle_count(lines):
     CycleCount = fact(
         'CycleCount',
         ['value']
@@ -143,15 +142,14 @@ def get_uploading(lines):
         PREP, rule(INT).interpretation(CycleCount.value), morph_pipeline(['цикл'])
     ).interpretation(CycleCount)
 
-    # show_matches(cycle_count_rule, lines)
+    show_matches(cycle_count_rule, lines)
 
+
+def get_clay_powder(lines):
     clay_powder_word = or_(
         morph_pipeline(['ГП']),
         morph_pipeline(['глинопорошок'])
     )
-    open_b = eq('(')
-    close_b = eq(')')
-    dash = eq('-')
 
     ClayPowder = fact(
         'ClayPowder',
@@ -160,22 +158,24 @@ def get_uploading(lines):
 
     clay_powder_rule = rule(
         clay_powder_word,
-        dash.optional(),
-        open_b,
+        DASH.optional(),
+        OPEN_BRACKET,
         rule(
-            INT, dash, INT,
-            rule(dash, INT).optional(),
+            INT, DASH, INT,
+            rule(DASH, INT).optional(),
             PERCENT
         ).interpretation(ClayPowder.concentration),
-        close_b,
+        CLOSE_BRACKET,
         rule(
-            dash,
-            rule(FLOAT, unit_word).interpretation(ClayPowder.mass)
+            DASH,
+            rule(DECIMAL, UNIT).interpretation(ClayPowder.mass)
         ).optional()
     ).interpretation(ClayPowder)
 
-    # show_matches(clay_powder_rule, lines)
+    show_matches(clay_powder_rule, lines)
 
+
+def get_buffer(lines):
     Buffer = fact(
         'Buffer',
         ['value']
@@ -184,13 +184,15 @@ def get_uploading(lines):
     buffer_rule = rule(
         morph_pipeline(['буфер']),
         rule(
-            or_(rule(INT), FLOAT),
-            unit_word
+            or_(rule(INT), DECIMAL),
+            UNIT
         ).interpretation(Buffer.value)
     ).interpretation(Buffer)
 
-    # show_matches(buffer_rule, lines)
+    show_matches(buffer_rule, lines)
 
+
+def get_wood_flour(lines):
     wood_flour_word = or_(
         morph_pipeline(['ДМ']),
         rule(morph_pipeline(['древесный']), morph_pipeline(['мука']))
@@ -203,22 +205,24 @@ def get_uploading(lines):
 
     wood_flour_rule = rule(
         wood_flour_word,
-        dash.optional(),
-        open_b,
+        DASH.optional(),
+        OPEN_BRACKET,
         rule(
-            FLOAT,
-            rule(dash, FLOAT).optional(),
+            DECIMAL,
+            rule(DASH, DECIMAL).optional(),
             PERCENT
-        ).interpretation(ClayPowder.concentration),
-        close_b,
+        ).interpretation(WoodFlour.concentration),
+        CLOSE_BRACKET,
         rule(
-            dash,
-            rule(FLOAT, unit_word).interpretation(ClayPowder.mass)
+            DASH,
+            rule(DECIMAL, UNIT).interpretation(WoodFlour.mass)
         ).optional()
-    )
+    ).interpretation(WoodFlour)
 
-    # show_matches(wood_flour_rule, lines)
+    show_matches(wood_flour_rule, lines)
 
+
+def get_squeeze(lines):
     Squeeze = fact(
         'Squeeze',
         ['value']
@@ -226,14 +230,16 @@ def get_uploading(lines):
 
     squeeze_rule = rule(
         morph_pipeline(['продавка']),
-        rule(PREP, volume_word).optional(),
+        rule(PREP, VOLUME).optional(),
         rule(
-            or_(rule(INT), FLOAT), unit_word
+            or_(rule(INT), DECIMAL), UNIT
         ).interpretation(Squeeze.value)
     ).interpretation(Squeeze)
 
-    # show_matches(squeeze_rule, lines)
+    show_matches(squeeze_rule, lines)
 
+
+def get_squeeze_final(lines):
     SqueezeFinal = fact(
         'SqueezeFinal',
         ['value']
@@ -242,11 +248,11 @@ def get_uploading(lines):
     squeeze_final_rule = rule(
         morph_pipeline(['продавить']),
         rule(
-            or_(rule(INT), FLOAT), unit_word
+            or_(rule(INT), DECIMAL), UNIT
         ).interpretation(SqueezeFinal.value)
     ).interpretation(SqueezeFinal)
 
-    # show_matches(squeeze_final_rule, lines)
+    show_matches(squeeze_final_rule, lines)
 
 
 def get_data_from_pdf(path):

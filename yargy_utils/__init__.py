@@ -1,4 +1,5 @@
 from yargy import or_, rule, and_
+from yargy.pipelines import morph_pipeline
 from yargy.predicates import gram, eq, length_eq, is_capitalized, type
 from yargy.relations import gnc_relation
 from yargy.tokenizer import MorphTokenizer, EOL
@@ -25,7 +26,6 @@ COMMA = eq(',')
 DOT = eq('.')
 # число
 INT = type('INT')
-FLOAT = rule(INT, or_(COMMA, DOT), INT)
 # разделитель в виде союза или знака препинания
 SEPARATOR = or_(COMMA, CONJ)
 # точка
@@ -40,6 +40,14 @@ DECIMAL = rule(INT,
                INT)
 COLON = eq(':')
 EQUAL_SIGN = eq('=')
+OPEN_BRACKET = eq('(')
+CLOSE_BRACKET = eq(')')
+DASH = eq('-')
+# единицы измерения
+UNIT = morph_pipeline(['м3', 'м3/сут', 'атм', 'тн'])
+# объем
+VOLUME = morph_pipeline(['объем'])
+
 # аббревиатура
 ABBR = and_(
     length_eq(3),
