@@ -1,3 +1,5 @@
+from os import listdir
+from os.path import join as path_join
 from pandas import DataFrame
 from pdf2docx import Converter
 
@@ -33,22 +35,25 @@ def get_resource_consumption(tables: list[list[list]]) -> DataFrame:
         return df
 
 
-def get_data_from_pdf_table(path):
-    # временая статическая переменная
-    path = '/home/cyxxqeq/Data4ActParser/ВДС_Размеченные_акты/AKT_KRS_5702_АН.pdf'
+def get_data_from_pdf_table(dir_path):
+    """
 
-    cv = Converter(path)
-    tables = cv.extract_tables()
-    cv.close()
+    :param path:
+    :return:
+    """
 
-    get_resource_consumption(tables)
+    paths = [path_join(dir_path, file) for file in listdir(dir_path)]
+    result = []
 
-    return tables
+    for path in paths:
+        cv = Converter(path)
+        tables = cv.extract_tables()
+        cv.close()
+
+        result.append(get_resource_consumption(tables))
+
+    return result
 
 
 if __name__ == '__main__':
-    temp_tables = get_data_from_pdf_table('')
-    # for temp_table in temp_tables:
-    #     for row in temp_table:
-    #         print(row)
-    #     print('\n\n')
+    print(get_data_from_pdf_table(path_join('/', 'home', 'cyxxqeq', 'Data4ActParser', 'ВДС_Размеченные_акты')))

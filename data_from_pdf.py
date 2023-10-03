@@ -1,3 +1,6 @@
+from os import listdir
+from os.path import join as path_join
+
 import pdfplumber
 from yargy import rule, Parser, or_
 from yargy.interpretation import fact
@@ -129,10 +132,17 @@ def get_process_solution(lines):
         rule(INT, UNIT).interpretation(ProcessSolution.value)
     ).interpretation(ProcessSolution)
 
-    show_matches(process_solution_rule, lines)
+    # show_matches(process_solution_rule, lines)
+    return get_field_value(process_solution_rule, lines)
 
 
 def get_cycle_count(lines):
+    """
+
+    :param lines:
+    :return:
+    """
+
     CycleCount = fact(
         'CycleCount',
         ['value']
@@ -142,10 +152,17 @@ def get_cycle_count(lines):
         PREP, rule(INT).interpretation(CycleCount.value), morph_pipeline(['цикл'])
     ).interpretation(CycleCount)
 
-    show_matches(cycle_count_rule, lines)
+    # show_matches(cycle_count_rule, lines)
+    return get_field_value(cycle_count_rule, lines)
 
 
 def get_clay_powder(lines):
+    """
+
+    :param lines:
+    :return:
+    """
+
     clay_powder_word = or_(
         morph_pipeline(['ГП']),
         morph_pipeline(['глинопорошок'])
@@ -172,10 +189,17 @@ def get_clay_powder(lines):
         ).optional()
     ).interpretation(ClayPowder)
 
-    show_matches(clay_powder_rule, lines)
+    # show_matches(clay_powder_rule, lines)
+    return get_field_value(clay_powder_rule, lines)
 
 
 def get_buffer(lines):
+    """
+
+    :param lines:
+    :return:
+    """
+
     Buffer = fact(
         'Buffer',
         ['value']
@@ -189,10 +213,17 @@ def get_buffer(lines):
         ).interpretation(Buffer.value)
     ).interpretation(Buffer)
 
-    show_matches(buffer_rule, lines)
+    # show_matches(buffer_rule, lines)
+    return get_field_value(buffer_rule, lines)
 
 
 def get_wood_flour(lines):
+    """
+
+    :param lines:
+    :return:
+    """
+
     wood_flour_word = or_(
         morph_pipeline(['ДМ']),
         rule(morph_pipeline(['древесный']), morph_pipeline(['мука']))
@@ -219,10 +250,17 @@ def get_wood_flour(lines):
         ).optional()
     ).interpretation(WoodFlour)
 
-    show_matches(wood_flour_rule, lines)
+    # show_matches(wood_flour_rule, lines)
+    return get_field_value(wood_flour_rule, lines)
 
 
 def get_squeeze(lines):
+    """
+
+    :param lines:
+    :return:
+    """
+
     Squeeze = fact(
         'Squeeze',
         ['value']
@@ -236,10 +274,17 @@ def get_squeeze(lines):
         ).interpretation(Squeeze.value)
     ).interpretation(Squeeze)
 
-    show_matches(squeeze_rule, lines)
+    # show_matches(squeeze_rule, lines)
+    return get_field_value(squeeze_rule, lines)
 
 
 def get_squeeze_final(lines):
+    """
+
+    :param lines:
+    :return:
+    """
+
     SqueezeFinal = fact(
         'SqueezeFinal',
         ['value']
@@ -252,32 +297,53 @@ def get_squeeze_final(lines):
         ).interpretation(SqueezeFinal.value)
     ).interpretation(SqueezeFinal)
 
-    show_matches(squeeze_final_rule, lines)
+    # show_matches(squeeze_final_rule, lines)
+    return get_field_value(squeeze_final_rule, lines)
 
 
-def get_data_from_pdf(path):
-    # временная статическая переменная
-    path = '/home/cyxxqeq/Data4ActParser/ВДС_Размеченные_акты/AKT_KRS_5702_АН.pdf'
+def get_data_from_pdf(dir_path):
+    """
 
-    pdf = pdfplumber.open(path)
-    p0 = pdf.pages[1]
-    text_act = p0.extract_text(
-        layout=True,
-        use_text_flow=True
-    )
+    :param dir_path:
+    :return:
+    """
 
-    lines = text_act.split('\n')
+    paths = [path_join(dir_path, file) for file in listdir(dir_path)]
 
-    # print(get_well_number(lines))
+    for path in paths:
+        print('-'*5, path.split('/')[-1], '-'*5, '\n')
+        pdf = pdfplumber.open(path)
+        p0 = pdf.pages[0]
+        text_act_0 = p0.extract_text(
+            layout=True,
+            use_text_flow=True
+        )
+        p1 = pdf.pages[1]
+        text_act_1 = p1.extract_text(
+            layout=True,
+            use_text_flow=True
+        )
 
-    # print(get_injectivity(lines))
+        lines0 = text_act_0.split('\n')
+        lines1 = text_act_1.split('\n')
 
-    # get_uploading(lines)
+        print('well number: ', get_well_number(lines0), '\n')
 
-    # injectivity = get_injectivity(lines)
-    # for inj in injectivity:
-    #     print(inj)
+        print('injectivity:\n')
+        injectivity = get_injectivity(lines1)
+        for inj in injectivity:
+            print(inj)
+        print('\n')
+
+        print('Объем тех раствора: ', get_process_solution(lines1), '\n')
+        print('Количество циклов: ', get_cycle_count(lines1), '\n')
+        print('Объем и концентрация глинопорошка: ', get_clay_powder(lines1), '\n')
+        print('Объем буфера: ', get_buffer(lines1), '\n')
+        print('Объем и концентрация глинопорошка: ', get_wood_flour(lines1), '\n')
+        print('Объем межцикловой продавки: ', get_squeeze(lines1), '\n')
+        print('Объем итоговой продавки: ', get_squeeze_final(lines1), '\n')
+        print('Давление закачки: ', 'soon...\n')
 
 
 if __name__ == '__main__':
-    get_data_from_pdf('')
+    get_data_from_pdf(path_join('/', 'home', 'cyxxqeq', 'Data4ActParser', 'ВДС_Размеченные_акты'))
