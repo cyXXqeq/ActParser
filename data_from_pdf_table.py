@@ -38,7 +38,7 @@ def get_resource_consumption(tables: list[list[list]]) -> DataFrame:
 def get_data_from_pdf_table(dir_path):
     """
 
-    :param path:
+    :param dir_path:
     :return:
     """
 

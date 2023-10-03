@@ -1,6 +1,8 @@
+from collections import namedtuple
 from os import listdir
 from os.path import join as path_join
 
+import pandas as pd
 import pdfplumber
 from yargy import rule, Parser, or_
 from yargy.interpretation import fact
@@ -31,15 +33,15 @@ def get_field_value(my_rule, lines, all=False, remainder=False):
         match = list(parser.findall(line))
 
         if line is not None and len(line) and len(match):
-            fact = match[0].fact
+            m_fact = match[0].fact
 
             if remainder:
-                fact.value = line.replace(fact.field_name, '').strip()
+                m_fact.value = line.replace(m_fact.field_name, '').strip()
 
             if all:
-                result.append(fact)
+                result.append(m_fact)
             else:
-                return fact
+                return m_fact
 
     return result
 
@@ -61,19 +63,19 @@ def get_well_number(lines) -> int:
     )
     WELL = rule(
         rule(WELL_WORD, NUMERO_SIGN).interpretation(Well.field_name),
-        rule(INT).interpretation(Well.value)
+        rule(INT)
     ).interpretation(Well)
 
-    result = get_field_value(WELL, lines)
+    result = get_field_value(WELL, lines, remainder=True)
 
     return result
 
 
-def get_injectivity(lines):
+def get_injectivity(lines) -> list[fact]:
     """
 
     :param lines:
-    :return:
+    :return: list of injectivity fact
     """
 
     speed_word = morph_pipeline(['скорость'])
@@ -170,7 +172,7 @@ def get_clay_powder(lines):
 
     ClayPowder = fact(
         'ClayPowder',
-        ['concentration', 'mass']
+        ['volume', 'concentration', 'mass']
     )
 
     clay_powder_rule = rule(
@@ -231,7 +233,7 @@ def get_wood_flour(lines):
 
     WoodFlour = fact(
         'WoodFlour',
-        ['concentration', 'mass']
+        ['volume', 'concentration', 'mass']
     )
 
     wood_flour_rule = rule(
@@ -278,6 +280,20 @@ def get_squeeze(lines):
     return get_field_value(squeeze_rule, lines)
 
 
+def get_injection_pressure(lines):
+    """
+
+    :param lines:
+    :return:
+    """
+
+    InjectionPressure = fact(
+        'InjectionPressure',
+        ['value']
+    )
+    return InjectionPressure()
+
+
 def get_squeeze_final(lines):
     """
 
@@ -309,41 +325,140 @@ def get_data_from_pdf(dir_path):
     """
 
     paths = [path_join(dir_path, file) for file in listdir(dir_path)]
+    columns = [
+        'Скважина',
+        'Приемистость скважины на 1-й скорости',
+        'Приемистость скважины на 2-й скорости',
+        'Приемистость скважины на 3-й скорости',
+        'Количество циклов',
+        'Объем технонологического раствора',
+        'Объем раствора глинопорошка',
+        'Концентрация глинопорошка',
+        'Масса глинопопрошка',
+        'Объем буфера ',
+        'Объем раствора древесной муки',
+        'Концентрация древесной муки',
+        'Масса древесной муки',
+        'Объем межцикловой продавки',
+        'Давление закачки',
+        'Объем финальной продавки',
+        'Приемистость скважины на 1-й скорости после закачки',
+        'Приемистость скважины на 2-й скорости после закачки',
+        'Приемистость скважины на 3-й скорости после закачки',
+    ]
+    df = pd.DataFrame(columns=columns)
+    NoneTuple = namedtuple(
+        'NoneTuple',
+        ['value', 'volume', 'concentration', 'mass', 'speed', 'field_name']
+    )
+    none_tuple = NoneTuple(None, None, None, None, None, None)
+
+    # for path in paths:
+    #     print('-'*5, path.split('/')[-1], '-'*5, '\n')
+    #     pdf = pdfplumber.open(path)
+    #     p0 = pdf.pages[0]
+    #     text_act_0 = p0.extract_text(
+    #         layout=True,
+    #         use_text_flow=True
+    #     )
+    #     p1 = pdf.pages[1]
+    #     text_act_1 = p1.extract_text(
+    #         layout=True,
+    #         use_text_flow=True
+    #     )
+    #
+    #     lines0 = text_act_0.split('\n')
+    #     lines1 = text_act_1.split('\n')
+    #
+    #     print('well number: ', get_well_number(lines0), '\n')
+    #
+    #     print('injectivity:\n')
+    #     injectivity = get_injectivity(lines1)
+    #     for inj in injectivity:
+    #         print(inj)
+    #     print('\n')
+    #
+    #     print('Объем тех раствора: ', get_process_solution(lines1), '\n')
+    #     print('Количество циклов: ', get_cycle_count(lines1), '\n')
+    #     print('Объем и концентрация глинопорошка: ', get_clay_powder(lines1), '\n')
+    #     print('Объем буфера: ', get_buffer(lines1), '\n')
+    #     print('Объем и концентрация глинопорошка: ', get_wood_flour(lines1), '\n')
+    #     print('Объем межцикловой продавки: ', get_squeeze(lines1), '\n')
+    #     print('Объем итоговой продавки: ', get_squeeze_final(lines1), '\n')
+    #     print('Давление закачки: ', 'soon...\n')
 
     for path in paths:
-        print('-'*5, path.split('/')[-1], '-'*5, '\n')
         pdf = pdfplumber.open(path)
-        p0 = pdf.pages[0]
-        text_act_0 = p0.extract_text(
-            layout=True,
-            use_text_flow=True
-        )
-        p1 = pdf.pages[1]
-        text_act_1 = p1.extract_text(
-            layout=True,
-            use_text_flow=True
-        )
+        data_fields = ['well', 'cycle_count', 'process_solution', 'clay_powder',
+                       'buffer', 'wood_flour', 'squeeze', 'injection_pressure', 'squeeze_final']
+        data = {field: None for field in data_fields}
+        data_get_functions = [
+            get_well_number,
+            get_cycle_count,
+            get_process_solution,
+            get_clay_powder,
+            get_buffer,
+            get_wood_flour,
+            get_squeeze,
+            get_injection_pressure,
+            get_squeeze_final,
+        ]
+        injectivity = []
 
-        lines0 = text_act_0.split('\n')
-        lines1 = text_act_1.split('\n')
+        for page in pdf.pages:
+            text_act = page.extract_text(
+                layout=True,
+                use_text_flow=True
+            )
+            lines = text_act.split('\n')
 
-        print('well number: ', get_well_number(lines0), '\n')
+            injectivity += get_injectivity(lines)
 
-        print('injectivity:\n')
-        injectivity = get_injectivity(lines1)
-        for inj in injectivity:
-            print(inj)
-        print('\n')
+            for field, func in zip(data_fields, data_get_functions):
+                if not data[field]:
+                    data[field] = func(lines)
 
-        print('Объем тех раствора: ', get_process_solution(lines1), '\n')
-        print('Количество циклов: ', get_cycle_count(lines1), '\n')
-        print('Объем и концентрация глинопорошка: ', get_clay_powder(lines1), '\n')
-        print('Объем буфера: ', get_buffer(lines1), '\n')
-        print('Объем и концентрация глинопорошка: ', get_wood_flour(lines1), '\n')
-        print('Объем межцикловой продавки: ', get_squeeze(lines1), '\n')
-        print('Объем итоговой продавки: ', get_squeeze_final(lines1), '\n')
-        print('Давление закачки: ', 'soon...\n')
+        for key, value in data.items():
+            if not value:
+                data[key] = none_tuple
+
+        inj_processed = [1, 2, 3, 1, 2, 3]
+        i = 0
+        j = 0
+        while i < len(inj_processed):
+            if int(injectivity[j].speed) == inj_processed[i]:
+                inj_processed[i] = injectivity[j].value
+                i += 1
+                j += 1
+            else:
+                inj_processed[i] = None
+                i += 1
+
+        data_list = [data['well'].value]
+        data_list += inj_processed[:3]
+        data_list += [
+            data['cycle_count'].value,
+            data['process_solution'].value,
+            data['clay_powder'].volume,
+            data['clay_powder'].concentration,
+            data['clay_powder'].mass,
+            data['buffer'].value,
+            data['wood_flour'].volume,
+            data['wood_flour'].concentration,
+            data['wood_flour'].mass,
+            data['squeeze'].value,
+            data['injection_pressure'].value,
+            data['squeeze_final'].value
+        ]
+        data_list += inj_processed[3:]
+
+        df.loc[len(df)] = data_list
+
+    df = df.fillna(value='н/д')
+    df.to_excel(path_join('/', 'home', 'cyxxqeq', 'PycharmProjects', 'ActParser', 'results', 'data_from_pdf.xlsx'))
+    return df
 
 
 if __name__ == '__main__':
+    # get_data_from_pdf(path_join('/', 'home', 'cyxxqeq', 'Data4ActParser', 'test'))
     get_data_from_pdf(path_join('/', 'home', 'cyxxqeq', 'Data4ActParser', 'ВДС_Размеченные_акты'))
