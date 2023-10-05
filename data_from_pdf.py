@@ -15,19 +15,36 @@ from yargy_utils import NUMERO_SIGN, show_json, INT, PREP, show_matches, COLON, 
     UNIT, DECIMAL, VOLUME, DASH, OPEN_BRACKET, CLOSE_BRACKET
 
 
-def show_from_act(my_rule, lines):
+def show_from_act(my_rule, text):
     parser = Parser(my_rule)
-    matches = list(parser.findall(lines))
+    matches = list(parser.findall(text))
     if matches:
         match = matches[0]
         fact = match.fact
         show_json(fact.as_json)
 
 
-def get_field_value(my_rule, lines, all=False, remainder=False):
+def get_field_value(my_rule: rule, text: str, all_match: bool = False, remainder: bool = False, lines: bool = True):
+    """
+
+    :param my_rule:
+    :param text:
+    :param all_match:
+    :param remainder:
+    :param lines:
+    :return:
+    """
+
     parser = Parser(my_rule)
     result = []
 
+    if not lines:
+        match = list(parser.findall(text.replace('\n', '')))
+        if len(match):
+            return match[0].fact
+        return result
+
+    lines = text.split('\n')
     for line in lines:
         line = line.strip()
         match = list(parser.findall(line))
@@ -38,7 +55,7 @@ def get_field_value(my_rule, lines, all=False, remainder=False):
             if remainder:
                 m_fact.value = line.replace(m_fact.field_name, '').strip()
 
-            if all:
+            if all_match:
                 result.append(m_fact)
             else:
                 return m_fact
@@ -46,13 +63,13 @@ def get_field_value(my_rule, lines, all=False, remainder=False):
     return result
 
 
-def get_well_number(lines) -> int:
+def get_well_number(text) -> int:
     """
     Название поля: Скважина;
     Значение: число;
     Примечание: универсально
 
-    :param lines: Текст, из которого будет извлекаться номер скважины
+    :param text: Текст, из которого будет извлекаться номер скважины
     :return: номер скважины
     """
 
@@ -66,15 +83,15 @@ def get_well_number(lines) -> int:
         rule(INT)
     ).interpretation(Well)
 
-    result = get_field_value(WELL, lines, remainder=True)
+    result = get_field_value(WELL, text, remainder=True)
 
     return result
 
 
-def get_injectivity(lines) -> list[fact]:
+def get_injectivity(text) -> list[fact]:
     """
 
-    :param lines:
+    :param text:
     :return: list of injectivity fact
     """
 
@@ -105,17 +122,17 @@ def get_injectivity(lines) -> list[fact]:
 
     # show_matches(injectivity_rule, lines)
 
-    result = get_field_value(injectivity_rule, lines, all=True, remainder=True)
+    result = get_field_value(injectivity_rule, text, all_match=True, remainder=True)
     for i, res in enumerate(result):
         result[i].speed = res.field_name.split()[0]
         result[i].value = res.value.replace(';', '').replace('.', '')
     return result
 
 
-def get_process_solution(lines):
+def get_process_solution(text):
     """
 
-    :param lines:
+    :param text:
     :return:
     """
 
@@ -131,17 +148,17 @@ def get_process_solution(lines):
         morph_pipeline(['ВДС']).optional(),
         PREP,
         VOLUME,
-        rule(INT, UNIT).interpretation(ProcessSolution.value)
+        rule(or_(rule(INT), DECIMAL), UNIT).interpretation(ProcessSolution.value)
     ).interpretation(ProcessSolution)
 
     # show_matches(process_solution_rule, lines)
-    return get_field_value(process_solution_rule, lines)
+    return get_field_value(process_solution_rule, text)
 
 
-def get_cycle_count(lines):
+def get_cycle_count(text):
     """
 
-    :param lines:
+    :param text:
     :return:
     """
 
@@ -155,13 +172,13 @@ def get_cycle_count(lines):
     ).interpretation(CycleCount)
 
     # show_matches(cycle_count_rule, lines)
-    return get_field_value(cycle_count_rule, lines)
+    return get_field_value(cycle_count_rule, text)
 
 
-def get_clay_powder(lines):
+def get_clay_powder(text):
     """
 
-    :param lines:
+    :param text:
     :return:
     """
 
@@ -192,13 +209,13 @@ def get_clay_powder(lines):
     ).interpretation(ClayPowder)
 
     # show_matches(clay_powder_rule, lines)
-    return get_field_value(clay_powder_rule, lines)
+    return get_field_value(clay_powder_rule, text)
 
 
-def get_buffer(lines):
+def get_buffer(text):
     """
 
-    :param lines:
+    :param text:
     :return:
     """
 
@@ -209,6 +226,19 @@ def get_buffer(lines):
 
     buffer_rule = rule(
         morph_pipeline(['буфер']),
+        DASH.optional(),
+        rule(
+            or_(rule(INT), DECIMAL),
+            UNIT
+        ).interpretation(Buffer.value)
+    ).interpretation(Buffer)
+
+    buffer_rule_2 = rule(
+        morph_pipeline(['смена']),
+        morph_pipeline(['закачка']),
+        morph_pipeline(['химреагенты']).optional(),
+        morph_pipeline(['продавка']),
+        morph_pipeline(['составить']).optional(),
         rule(
             or_(rule(INT), DECIMAL),
             UNIT
@@ -216,19 +246,22 @@ def get_buffer(lines):
     ).interpretation(Buffer)
 
     # show_matches(buffer_rule, lines)
-    return get_field_value(buffer_rule, lines)
+    buffer_value = get_field_value(buffer_rule, text)
+    if buffer_value and buffer_value.value:
+        return buffer_value
+    return get_field_value(buffer_rule_2, text)
 
 
-def get_wood_flour(lines):
+def get_wood_flour(text):
     """
 
-    :param lines:
+    :param text:
     :return:
     """
 
     wood_flour_word = or_(
         morph_pipeline(['ДМ']),
-        rule(morph_pipeline(['древесный']), morph_pipeline(['мука']))
+        rule(morph_pipeline(['древесная']), morph_pipeline(['мука']))
     )
 
     WoodFlour = fact(
@@ -253,13 +286,13 @@ def get_wood_flour(lines):
     ).interpretation(WoodFlour)
 
     # show_matches(wood_flour_rule, lines)
-    return get_field_value(wood_flour_rule, lines)
+    return get_field_value(wood_flour_rule, text) or get_field_value(wood_flour_rule, text, lines=False)
 
 
-def get_squeeze(lines):
+def get_squeeze(text):
     """
 
-    :param lines:
+    :param text:
     :return:
     """
 
@@ -277,13 +310,13 @@ def get_squeeze(lines):
     ).interpretation(Squeeze)
 
     # show_matches(squeeze_rule, lines)
-    return get_field_value(squeeze_rule, lines)
+    return get_field_value(squeeze_rule, text)
 
 
-def get_injection_pressure(lines):
+def get_injection_pressure(text):
     """
 
-    :param lines:
+    :param text:
     :return:
     """
 
@@ -294,10 +327,10 @@ def get_injection_pressure(lines):
     return InjectionPressure()
 
 
-def get_squeeze_final(lines):
+def get_squeeze_final(text):
     """
 
-    :param lines:
+    :param text:
     :return:
     """
 
@@ -314,7 +347,7 @@ def get_squeeze_final(lines):
     ).interpretation(SqueezeFinal)
 
     # show_matches(squeeze_final_rule, lines)
-    return get_field_value(squeeze_final_rule, lines)
+    return get_field_value(squeeze_final_rule, text)
 
 
 def get_data_from_pdf(dir_path):
@@ -353,40 +386,6 @@ def get_data_from_pdf(dir_path):
     )
     none_tuple = NoneTuple(None, None, None, None, None, None)
 
-    # for path in paths:
-    #     print('-'*5, path.split('/')[-1], '-'*5, '\n')
-    #     pdf = pdfplumber.open(path)
-    #     p0 = pdf.pages[0]
-    #     text_act_0 = p0.extract_text(
-    #         layout=True,
-    #         use_text_flow=True
-    #     )
-    #     p1 = pdf.pages[1]
-    #     text_act_1 = p1.extract_text(
-    #         layout=True,
-    #         use_text_flow=True
-    #     )
-    #
-    #     lines0 = text_act_0.split('\n')
-    #     lines1 = text_act_1.split('\n')
-    #
-    #     print('well number: ', get_well_number(lines0), '\n')
-    #
-    #     print('injectivity:\n')
-    #     injectivity = get_injectivity(lines1)
-    #     for inj in injectivity:
-    #         print(inj)
-    #     print('\n')
-    #
-    #     print('Объем тех раствора: ', get_process_solution(lines1), '\n')
-    #     print('Количество циклов: ', get_cycle_count(lines1), '\n')
-    #     print('Объем и концентрация глинопорошка: ', get_clay_powder(lines1), '\n')
-    #     print('Объем буфера: ', get_buffer(lines1), '\n')
-    #     print('Объем и концентрация глинопорошка: ', get_wood_flour(lines1), '\n')
-    #     print('Объем межцикловой продавки: ', get_squeeze(lines1), '\n')
-    #     print('Объем итоговой продавки: ', get_squeeze_final(lines1), '\n')
-    #     print('Давление закачки: ', 'soon...\n')
-
     for path in paths:
         pdf = pdfplumber.open(path)
         data_fields = ['well', 'cycle_count', 'process_solution', 'clay_powder',
@@ -410,13 +409,11 @@ def get_data_from_pdf(dir_path):
                 layout=True,
                 use_text_flow=True
             )
-            lines = text_act.split('\n')
-
-            injectivity += get_injectivity(lines)
+            injectivity += get_injectivity(text_act)
 
             for field, func in zip(data_fields, data_get_functions):
                 if not data[field]:
-                    data[field] = func(lines)
+                    data[field] = func(text_act)
 
         for key, value in data.items():
             if not value:
@@ -460,5 +457,5 @@ def get_data_from_pdf(dir_path):
 
 
 if __name__ == '__main__':
-    # get_data_from_pdf(path_join('/', 'home', 'cyxxqeq', 'Data4ActParser', 'test'))
-    get_data_from_pdf(path_join('/', 'home', 'cyxxqeq', 'Data4ActParser', 'ВДС_Размеченные_акты'))
+    get_data_from_pdf(path_join('/', 'home', 'cyxxqeq', 'Data4ActParser', 'test'))
+    # get_data_from_pdf(path_join('/', 'home', 'cyxxqeq', 'Data4ActParser', 'ВДС_Размеченные_акты'))
