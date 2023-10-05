@@ -1,3 +1,4 @@
+import time
 from collections import namedtuple
 from os import listdir
 from os.path import join as path_join
@@ -324,7 +325,17 @@ def get_injection_pressure(text):
         'InjectionPressure',
         ['value']
     )
-    return InjectionPressure()
+
+    injection_pressure_rule = rule(
+        morph_pipeline(['Pзак', 'Рзак']),
+        EQUAL_SIGN,
+        rule(
+            INT, DASH, INT, rule(DASH, INT).optional(), UNIT
+        ).interpretation(InjectionPressure.value)
+    ).interpretation(InjectionPressure)
+
+    return (get_field_value(injection_pressure_rule, text)
+            or get_field_value(injection_pressure_rule, text, lines=False))
 
 
 def get_squeeze_final(text):
@@ -457,5 +468,7 @@ def get_data_from_pdf(dir_path):
 
 
 if __name__ == '__main__':
-    get_data_from_pdf(path_join('/', 'home', 'cyxxqeq', 'Data4ActParser', 'test'))
-    # get_data_from_pdf(path_join('/', 'home', 'cyxxqeq', 'Data4ActParser', 'ВДС_Размеченные_акты'))
+    start = time.time()
+    # get_data_from_pdf(path_join('/', 'home', 'cyxxqeq', 'Data4ActParser', 'test'))
+    get_data_from_pdf(path_join('/', 'home', 'cyxxqeq', 'Data4ActParser', 'ВДС_Размеченные_акты'))
+    print(time.time() - start)

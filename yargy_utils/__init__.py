@@ -28,8 +28,6 @@ DOT = eq('.')
 INT = type('INT')
 # разделитель в виде союза или знака препинания
 SEPARATOR = or_(COMMA, CONJ)
-# точка
-DOT = eq('.')
 # числительное
 NUMR = gram('NUMR')
 PERCENT = eq('%')
@@ -38,6 +36,10 @@ SLASH = eq('/')
 DECIMAL = rule(INT,
                or_(COMMA, DOT),
                INT)
+ANY_NUM = rule(or_(
+    rule(INT),
+    DECIMAL
+))
 COLON = eq(':')
 EQUAL_SIGN = eq('=')
 OPEN_BRACKET = eq('(')
