@@ -260,17 +260,17 @@ def get_clay_powder(text: str) -> Fact:
         clay_powder_rule_2_2
     )
 
-    result = get_field_value(clay_powder_rule, text)
+    value = get_field_value(clay_powder_rule, text)
 
-    if result:
-        return result
+    if value:
+        return value
 
-    values = get_field_value_with_skip(clay_powder_rule_2, text)
+    value = get_field_value_with_skip(clay_powder_rule_2, text)
 
-    if values:
+    if value:
         result = ''
 
-        for s in values:
+        for s in value:
             result += s + ' '
 
         return get_field_value(
@@ -294,8 +294,10 @@ def get_buffer(text: str) -> Fact:
         ['value']
     )
 
+    buffer_word = morph_pipeline(['буфер'])
+
     buffer_rule = rule(
-        morph_pipeline(['буфер']),
+        buffer_word,
         DASH.optional(),
         rule(
             or_(rule(INT), DECIMAL),
@@ -315,11 +317,40 @@ def get_buffer(text: str) -> Fact:
         ).interpretation(Buffer.value)
     ).interpretation(Buffer)
 
-    # show_matches(buffer_rule, lines)
-    buffer_value = get_field_value(buffer_rule, text)
-    if buffer_value and buffer_value.value:
-        return buffer_value
-    return get_field_value(buffer_rule_2, text)
+    buffer_rule_3 = rule(
+        caseless('V'),
+        EQUAL_SIGN,
+        DECIMAL.interpretation(Buffer.value)
+    )
+
+    value = get_field_value(buffer_rule, text)
+
+    if value and value.value:
+        return value
+
+    value = get_field_value(buffer_rule_2, text)
+
+    if value:
+        return value
+
+    value = get_field_value_with_skip(
+        or_(buffer_word, buffer_rule_3),
+        text
+    )
+
+    if value:
+        result = ''
+
+        for s in value:
+            result += s + ' '
+
+        return get_field_value(
+            rule(
+                buffer_word,
+                buffer_rule_3
+            ).interpretation(Buffer),
+            result
+        )
 
 
 def get_wood_flour(text: str) -> Fact:
@@ -355,7 +386,45 @@ def get_wood_flour(text: str) -> Fact:
         ).optional()
     ).interpretation(WoodFlour)
 
-    return get_field_value(wood_flour_rule, text) or get_field_value(wood_flour_rule, text, lines=False)
+    wood_flour_rule_2_1 = rule(
+        wood_flour_word,
+        PREP,
+        caseless('V'),
+        EQUAL_SIGN,
+        rule(INT, UNIT).interpretation(WoodFlour.volume)
+    )
+
+    wood_flour_rule_2_2 = rule(
+        morph_pipeline(['концентрация']),
+        rule(
+            DECIMAL, DASH, DECIMAL, rule(DASH, DECIMAL).optional(), PERCENT
+        ).interpretation(WoodFlour.concentration)
+    )
+
+    wood_flour_rule_2 = or_(
+        wood_flour_rule_2_1,
+        wood_flour_rule_2_2
+    )
+
+    result = get_field_value(wood_flour_rule, text) or get_field_value(wood_flour_rule, text, lines=False)
+    if result:
+        return result
+
+    value = get_field_value_with_skip(wood_flour_rule_2, text)
+
+    if value:
+        result = ''
+
+        for s in value:
+            result += s + ' '
+
+        return get_field_value(
+            rule(
+                wood_flour_rule_2_1,
+                wood_flour_rule_2_2
+            ).interpretation(WoodFlour),
+            result
+        )
 
 
 def get_squeeze(text: str) -> Fact:
@@ -370,15 +439,46 @@ def get_squeeze(text: str) -> Fact:
         ['value']
     )
 
+    squeeze_word = morph_pipeline(['продавка'])
+
     squeeze_rule = rule(
-        morph_pipeline(['продавка']),
+        squeeze_word,
         rule(PREP, VOLUME).optional(),
         rule(
             or_(rule(INT), DECIMAL), UNIT
         ).interpretation(Squeeze.value)
     ).interpretation(Squeeze)
 
-    return get_field_value(squeeze_rule, text)
+    squeeze_rule_2 = rule(
+        caseless('V'),
+        EQUAL_SIGN,
+        DECIMAL.interpretation(Squeeze.value)
+    )
+
+    result = get_field_value(squeeze_rule, text)
+
+    if result:
+        return result
+
+    value = get_field_value_with_skip(
+        or_(squeeze_word, squeeze_rule_2),
+        text,
+        lines=False
+    )
+
+    if value:
+        result = ''
+
+        for s in value:
+            result += s + ' '
+
+        return get_field_value(
+            rule(
+                squeeze_word,
+                squeeze_rule_2
+            ).interpretation(Squeeze),
+            result
+        )
 
 
 def get_injection_pressure(text: str) -> Fact:
