@@ -44,6 +44,12 @@ def get_data_from_pdf_table(dir_path):
 
     paths = [path_join(dir_path, file) for file in listdir(dir_path)]
     result = []
+    columns = []
+    for i in range(1, 8):
+        columns.append(f'Материал {i}')
+        columns.append(f'Плотность материала {i}')
+        columns.append(f'Количество материала {i}')
+    df = DataFrame(columns=columns)
 
     for path in paths:
         cv = Converter(path)
@@ -52,8 +58,22 @@ def get_data_from_pdf_table(dir_path):
 
         result.append(get_resource_consumption(tables))
 
-    return result
+    for dataframe in result:
+        temp_row = []
+
+        for row in dataframe.iterrows():
+            temp_row += row[1].to_list()
+
+        while len(temp_row) < 21:
+            temp_row.append(None)
+
+        df.loc[len(df)] = temp_row
+
+    df = df.replace([''], 'н/д')
+    df = df.fillna(value='н/д')
+
+    return df
 
 
 if __name__ == '__main__':
-    print(get_data_from_pdf_table(path_join('/', 'home', 'cyxxqeq', 'Data4ActParser', 'ВДС_Размеченные_акты')))
+    get_data_from_pdf_table(path_join('/', 'home', 'cyxxqeq', 'Data4ActParser', 'ВДС_Размеченные_акты'))
