@@ -1,8 +1,4 @@
-from yargy.tokenizer import (
-    Tokenizer,
-    MorphTokenizer,
-    EOL
-)
+from yargy.tokenizer import Tokenizer
 
 
 class IdTokenizer(Tokenizer):

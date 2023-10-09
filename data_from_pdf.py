@@ -1,4 +1,3 @@
-import time
 from collections import namedtuple
 from os import listdir
 from os.path import join as path_join
@@ -27,33 +26,29 @@ def show_from_act(my_rule: Rule, text: str) -> None:
         show_json(m_fact.as_json)
 
 
+NoneTuple = namedtuple(
+    'NoneTuple',
+    ['value', 'volume', 'concentration', 'mass', 'speed', 'field_name']
+)
+none_tuple = NoneTuple(None, None, None, None, None, None)
+
+
 def get_field_value(my_rule: Rule, text: str, all_match: bool = False, remainder: bool = False,
-                    lines: bool = True) -> list or fact:
-    """
-
-    :param my_rule:
-    :param text:
-    :param all_match:
-    :param remainder:
-    :param lines:
-    :return:
-    """
-
+                    lines: bool = True):
     parser = Parser(my_rule)
     result = []
 
     if not lines:
         match = list(parser.findall(text.replace('\n', '')))
-        if len(match):
+        if match:
             return match[0].fact
         return result
 
-    lines = text.split('\n')
-    for line in lines:
+    for line in text.split('\n'):
         line = line.strip()
         match = list(parser.findall(line))
 
-        if line is not None and len(line) and len(match):
+        if match:
             m_fact = match[0].fact
 
             if remainder:
@@ -88,9 +83,7 @@ def get_field_value_with_skip(my_rule: Rule, text: str, lines: bool = True) -> l
         tokens_values = list(select_span_tokens(tokens, spans))
         return tokens_values
 
-    lines = text.split('\n')
-
-    for line in lines:
+    for line in text.split('\n'):
         tokens = list(TOKENIZER(line))
         matches = parser.findall(tokens)
         spans = [_.span for _ in matches]
@@ -98,8 +91,10 @@ def get_field_value_with_skip(my_rule: Rule, text: str, lines: bool = True) -> l
         if tokens_values:
             return tokens_values
 
+    return []
 
-def get_well_number(text: str) -> Fact:
+
+def get_well_number(text: str):
     """
     Название поля: Скважина;
     Значение: число;
@@ -124,7 +119,7 @@ def get_well_number(text: str) -> Fact:
     return result
 
 
-def get_injectivity(text: str) -> list[Fact]:
+def get_injectivity(text: str):
     """
 
     :param text:
@@ -163,7 +158,7 @@ def get_injectivity(text: str) -> list[Fact]:
     return result
 
 
-def get_process_solution(text: str) -> Fact:
+def get_process_solution(text: str):
     """
 
     :param text:
@@ -188,7 +183,7 @@ def get_process_solution(text: str) -> Fact:
     return get_field_value(process_solution_rule, text)
 
 
-def get_cycle_count(text: str) -> Fact:
+def get_cycle_count(text: str):
     """
 
     :param text:
@@ -207,7 +202,7 @@ def get_cycle_count(text: str) -> Fact:
     return get_field_value(cycle_count_rule, text)
 
 
-def get_clay_powder(text: str) -> Fact:
+def get_clay_powder(text: str):
     """
 
     :param text:
@@ -282,7 +277,7 @@ def get_clay_powder(text: str) -> Fact:
         )
 
 
-def get_buffer(text: str) -> Fact:
+def get_buffer(text: str):
     """
 
     :param text:
@@ -325,7 +320,7 @@ def get_buffer(text: str) -> Fact:
 
     value = get_field_value(buffer_rule, text)
 
-    if value and value.value:
+    if value:
         return value
 
     value = get_field_value(buffer_rule_2, text)
@@ -353,7 +348,7 @@ def get_buffer(text: str) -> Fact:
         )
 
 
-def get_wood_flour(text: str) -> Fact:
+def get_wood_flour(text: str):
     """
 
     :param text:
@@ -406,7 +401,10 @@ def get_wood_flour(text: str) -> Fact:
         wood_flour_rule_2_2
     )
 
-    result = get_field_value(wood_flour_rule, text) or get_field_value(wood_flour_rule, text, lines=False)
+    result = (
+            get_field_value(wood_flour_rule, text)
+            or get_field_value(wood_flour_rule, text, lines=False)
+    )
     if result:
         return result
 
@@ -427,7 +425,7 @@ def get_wood_flour(text: str) -> Fact:
         )
 
 
-def get_squeeze(text: str) -> Fact:
+def get_squeeze(text: str):
     """
 
     :param text:
@@ -481,7 +479,7 @@ def get_squeeze(text: str) -> Fact:
         )
 
 
-def get_injection_pressure(text: str) -> Fact:
+def get_injection_pressure(text: str):
     """
 
     :param text:
@@ -505,7 +503,7 @@ def get_injection_pressure(text: str) -> Fact:
             or get_field_value(injection_pressure_rule, text, lines=False))
 
 
-def get_squeeze_final(text: str) -> Fact:
+def get_squeeze_final(text: str):
     """
 
     :param text:
@@ -527,10 +525,11 @@ def get_squeeze_final(text: str) -> Fact:
     return get_field_value(squeeze_final_rule, text)
 
 
-def get_data_from_pdf(dir_path: str) -> pd.DataFrame:
+def get_data_from_pdf(dir_path: str, log: bool = False) -> pd.DataFrame:
     """
 
     :param dir_path:
+    :param log:
     :return:
     """
 
@@ -557,17 +556,16 @@ def get_data_from_pdf(dir_path: str) -> pd.DataFrame:
         'Приемистость скважины на 3-й скорости после закачки',
     ]
     df = pd.DataFrame(columns=columns)
-    NoneTuple = namedtuple(
-        'NoneTuple',
-        ['value', 'volume', 'concentration', 'mass', 'speed', 'field_name']
-    )
-    none_tuple = NoneTuple(None, None, None, None, None, None)
 
     for path in paths:
+
+        if log:
+            print(f'[INFO] path: {path}')
+
         pdf = pdfplumber.open(path)
         data_fields = ['well', 'cycle_count', 'process_solution', 'clay_powder',
                        'buffer', 'wood_flour', 'squeeze', 'injection_pressure', 'squeeze_final']
-        data = {field: None for field in data_fields}
+        data: dict[str, None | NoneTuple | Fact] = {field: None for field in data_fields}
         data_get_functions = [
             get_well_number,
             get_cycle_count,
@@ -596,11 +594,14 @@ def get_data_from_pdf(dir_path: str) -> pd.DataFrame:
             if not value:
                 data[key] = none_tuple
 
-        inj_processed = [1, 2, 3, 1, 2, 3]
+        inj_processed: list[int | None] = [1, 2, 3, 1, 2, 3]
         i = 0
         j = 0
         while i < len(inj_processed):
-            if int(injectivity[j].speed) == inj_processed[i]:
+            if j >= len(injectivity):
+                inj_processed[i] = None
+                i += 1
+            elif int(injectivity[j].speed) == inj_processed[i]:
                 inj_processed[i] = injectivity[j].value
                 i += 1
                 j += 1
@@ -629,12 +630,14 @@ def get_data_from_pdf(dir_path: str) -> pd.DataFrame:
         df.loc[len(df)] = data_list
 
     df = df.fillna(value='н/д')
-    df.to_excel(path_join('/', 'home', 'cyxxqeq', 'PycharmProjects', 'ActParser', 'results', 'data_from_pdf.xlsx'))
+    # df.to_excel(
+    #     path_join(
+    #         '/', 'home', 'cyxxqeq', 'PycharmProjects', 'ActParser', 'results', 'data_from_pdf.xlsx'
+    #     )
+    # )
     return df
 
 
 if __name__ == '__main__':
-    start = time.time()
-    get_data_from_pdf(path_join('/', 'home', 'cyxxqeq', 'Data4ActParser', 'test'))
+    get_data_from_pdf(path_join('/', 'home', 'cyxxqeq', 'Data4ActParser', 'test'), log=True)
     # get_data_from_pdf(path_join('/', 'home', 'cyxxqeq', 'Data4ActParser', 'ВДС_Размеченные_акты'))
-    print(time.time() - start)

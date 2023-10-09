@@ -1,10 +1,10 @@
+import json
+
 from ipymarkup import show_span_ascii_markup as show_markup
 from yargy import (
     Parser,
-    or_, rule,
-    and_
+    rule
 )
-import json
 
 
 # подчёркивает конструкции, соответствующие правилу
