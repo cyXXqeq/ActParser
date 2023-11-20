@@ -1,6 +1,6 @@
 from collections import namedtuple
 from os import listdir
-from os.path import join as path_join
+from os.path import join as path_join, isdir
 
 import pandas as pd
 import pdfplumber
@@ -13,7 +13,7 @@ from yargy.rule import Rule
 
 from yargy_utils import (
     NUMERO_SIGN, show_json, INT, PREP, COLON, EQUAL_SIGN, PERCENT, DOT, UNIT,
-    DECIMAL, VOLUME, DASH, OPEN_BRACKET, CLOSE_BRACKET, TOKENIZER, ID_TOKENIZER
+    DECIMAL, VOLUME, DASH, OPEN_BRACKET, CLOSE_BRACKET, TOKENIZER, ID_TOKENIZER, show_matches
 )
 
 
@@ -73,7 +73,9 @@ def select_span_tokens(tokens, spans):
             yield token.value
 
 
-def get_field_value_with_skip(my_rule: Rule, text: str, lines: bool = True) -> list[str]:
+def get_field_value_with_skip(
+        my_rule: Rule, text: str, lines: bool = True, first_value: bool = True
+) -> list[str] | list[list[str]]:
     parser = Parser(my_rule, tokenizer=ID_TOKENIZER)
 
     if not lines:
@@ -83,15 +85,19 @@ def get_field_value_with_skip(my_rule: Rule, text: str, lines: bool = True) -> l
         tokens_values = list(select_span_tokens(tokens, spans))
         return tokens_values
 
+    results = []
+
     for line in text.split('\n'):
         tokens = list(TOKENIZER(line))
         matches = parser.findall(tokens)
         spans = [_.span for _ in matches]
         tokens_values = list(select_span_tokens(tokens, spans))
         if tokens_values:
-            return tokens_values
+            if first_value:
+                return tokens_values
+            results.append(tokens_values)
 
-    return []
+    return results
 
 
 def get_well_number(text: str):
@@ -510,19 +516,64 @@ def get_squeeze_final(text: str):
     :return:
     """
 
+    squeeze_word = morph_pipeline(['продавить'])
+
     SqueezeFinal = fact(
         'SqueezeFinal',
         ['value']
     )
 
+    squeeze_value_rule = rule(or_(rule(INT), DECIMAL), UNIT)
+
     squeeze_final_rule = rule(
-        morph_pipeline(['продавить']),
-        rule(
-            or_(rule(INT), DECIMAL), UNIT
-        ).interpretation(SqueezeFinal.value)
+        squeeze_word,
+        squeeze_value_rule.interpretation(SqueezeFinal.value)
     ).interpretation(SqueezeFinal)
 
-    return get_field_value(squeeze_final_rule, text)
+    result = get_field_value(squeeze_final_rule, text)
+
+    if result:
+        return result
+
+    squeeze_final_rule_2_1 = rule(
+        PREP,
+        morph_pipeline(['объем']),
+        squeeze_value_rule.interpretation(SqueezeFinal.value)
+    )
+
+    squeeze_final_rule_2 = or_(
+        squeeze_word,
+        squeeze_final_rule_2_1
+    ).interpretation(SqueezeFinal)
+
+    squeeze_final_rule_3 = rule(
+        squeeze_word,
+        squeeze_final_rule_2_1
+    ).interpretation(SqueezeFinal)
+
+    lines = [line for line in text.split('\n')]
+    show_matches(squeeze_final_rule_2, lines)
+
+    value = get_field_value_with_skip(
+        squeeze_final_rule_2,
+        text,
+        lines=True,
+        first_value=False
+    )
+
+    if not value:
+        return result
+
+    extract_text = []
+
+    if isinstance(value[0], list):
+        value = sum(value, [])
+        extract_text = ''.join([s + ' ' for s in value])
+
+    return get_field_value(
+        squeeze_final_rule_3,
+        extract_text
+    )
 
 
 def get_data_from_pdf(dir_path: str, log: bool = False) -> pd.DataFrame:
@@ -534,6 +585,7 @@ def get_data_from_pdf(dir_path: str, log: bool = False) -> pd.DataFrame:
     """
 
     paths = [path_join(dir_path, file) for file in listdir(dir_path)]
+    paths = list(filter(lambda x: not isdir(x), paths))
     columns = [
         'Скважина',
         'Приемистость скважины на 1-й скорости',
@@ -548,6 +600,11 @@ def get_data_from_pdf(dir_path: str, log: bool = False) -> pd.DataFrame:
         'Объем раствора древесной муки',
         'Концентрация древесной муки',
         'Масса древесной муки',
+        # 'Объем первичного раствора',
+        # 'Объем нефтенола в первичном растворе',
+        # 'Объем воды в первичном растворе',
+        # 'Объем ГЭР',
+        # 'Концентрация ПАВ в ГЭР',
         'Объем межцикловой продавки',
         'Давление закачки',
         'Объем финальной продавки',
