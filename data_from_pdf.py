@@ -431,6 +431,24 @@ def get_wood_flour(text: str):
         )
 
 
+def get_primary_solution(text: str):
+    PrimarySolution = fact(
+        'PrimarySolution',
+        ['value']
+    )
+
+    primary_solution_rule = rule(
+        morph_pipeline(['первичный']),
+        morph_pipeline(['раствор']),
+        rule(PREP, morph_pipeline(['объем'])).optional(),
+        rule(
+            or_(rule(INT), DECIMAL), UNIT
+        ).interpretation(PrimarySolution.value)
+    ).interpretation(PrimarySolution)
+
+    return get_field_value(primary_solution_rule, text)
+
+
 def get_squeeze(text: str):
     """
 
@@ -551,9 +569,6 @@ def get_squeeze_final(text: str):
         squeeze_final_rule_2_1
     ).interpretation(SqueezeFinal)
 
-    lines = [line for line in text.split('\n')]
-    show_matches(squeeze_final_rule_2, lines)
-
     value = get_field_value_with_skip(
         squeeze_final_rule_2,
         text,
@@ -600,7 +615,7 @@ def get_data_from_pdf(dir_path: str, log: bool = False) -> pd.DataFrame:
         'Объем раствора древесной муки',
         'Концентрация древесной муки',
         'Масса древесной муки',
-        # 'Объем первичного раствора',
+        'Объем первичного раствора',
         # 'Объем нефтенола в первичном растворе',
         # 'Объем воды в первичном растворе',
         # 'Объем ГЭР',
@@ -621,7 +636,8 @@ def get_data_from_pdf(dir_path: str, log: bool = False) -> pd.DataFrame:
 
         pdf = pdfplumber.open(path)
         data_fields = ['well', 'cycle_count', 'process_solution', 'clay_powder',
-                       'buffer', 'wood_flour', 'squeeze', 'injection_pressure', 'squeeze_final']
+                       'buffer', 'wood_flour', 'primary_solution', 'squeeze',
+                       'injection_pressure', 'squeeze_final']
         data: dict[str, None | NoneTuple | Fact] = {field: None for field in data_fields}
         data_get_functions = [
             get_well_number,
@@ -630,6 +646,7 @@ def get_data_from_pdf(dir_path: str, log: bool = False) -> pd.DataFrame:
             get_clay_powder,
             get_buffer,
             get_wood_flour,
+            get_primary_solution,
             get_squeeze,
             get_injection_pressure,
             get_squeeze_final,
@@ -678,6 +695,7 @@ def get_data_from_pdf(dir_path: str, log: bool = False) -> pd.DataFrame:
             data['wood_flour'].volume,
             data['wood_flour'].concentration,
             data['wood_flour'].mass,
+            data['primary_solution'].value,
             data['squeeze'].value,
             data['injection_pressure'].value,
             data['squeeze_final'].value
