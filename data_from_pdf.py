@@ -456,13 +456,17 @@ def get_neftenol_and_waste_water(text: str):
 
     neftenol_rule = morph_pipeline(['Нефтенол'])
 
-    waste_water_rule = rule(
-        or_(
-            morph_pipeline(['сточный']),
-            morph_pipeline(['пресный'])
+    waste_water_rule = or_(
+        rule(
+            morph_pipeline(['сточный', 'сточн', 'пресный']),
+            SLASH.optional(),
+            morph_pipeline(['вода'])
         ),
-        SLASH.optional(),
-        morph_pipeline(['вода'])
+        rule(
+            morph_pipeline(['тех']),
+            DOT,
+            morph_pipeline(['жидкость'])
+        )
     )
 
     neftenol_waste_water_rule = rule(
