@@ -11,6 +11,7 @@ from yargy.pipelines import morph_pipeline
 from yargy.predicates import caseless
 from yargy.rule import Rule
 
+from get_text_utils import text_from_docx
 from yargy_utils import (
     NUMERO_SIGN, show_json, INT, PREP, COLON, EQUAL_SIGN, PERCENT, DOT, UNIT,
     DECIMAL, VOLUME, DASH, OPEN_BRACKET, CLOSE_BRACKET, TOKENIZER, ID_TOKENIZER, SLASH, CONJ
@@ -83,7 +84,7 @@ def get_field_value_with_skip(
         matches = parser.findall(tokens)
         spans = [_.span for _ in matches]
         tokens_values = list(select_span_tokens(tokens, spans))
-        return tokens_values
+        return ' '.join(tokens_values)
 
     results = []
 
@@ -167,7 +168,9 @@ def get_injectivity(text: str):
     result = get_field_value(injectivity_rule, text, all_match=True, remainder=True)
     for i, res in enumerate(result):
         result[i].speed = res.field_name.split()[0]
-        result[i].value = res.value.replace(';', '').replace('.', '')
+        value = res.value.replace(';', '').replace('.', '').replace('приемистость:', '')
+        value = ' '.join(value.split())
+        result[i].value = value
     return result
 
 
@@ -458,7 +461,7 @@ def get_neftenol_and_waste_water(text: str):
 
     waste_water_rule = or_(
         rule(
-            morph_pipeline(['сточный', 'сточн', 'пресный']),
+            morph_pipeline(['сточный', 'сточн', 'пресный', 'пресн']),
             SLASH.optional(),
             morph_pipeline(['вода'])
         ),
@@ -487,6 +490,7 @@ def get_neftenol_and_waste_water(text: str):
     extract_text = get_field_value_with_skip(
         neftenol_waste_water_rule,
         text,
+        lines=False,
         first_value=False
     )
 
@@ -660,11 +664,21 @@ def get_squeeze_final(text: str):
     )
 
 
-def get_data_from_pdf(dir_path: str, log: bool = False) -> pd.DataFrame:
+def extract_data_from_text(text_act, data_fields, data_get_functions, data, injectivity):
+    text_act = text_act.replace('c', 'с').replace('o', 'о')
+    injectivity += get_injectivity(text_act)
+
+    for field, func in zip(data_fields, data_get_functions):
+        if not data[field]:
+            data[field] = func(text_act)
+
+
+def get_data_from_pdf(dir_path: str, log: bool = False, is_docx: bool = False) -> pd.DataFrame:
     """
 
-    :param dir_path:
-    :param log:
+    :param dir_path: path to dir containing documents
+    :param log: output log if true
+    :param is_docx: docx file if True, else pdf file
     :return:
     """
 
@@ -703,7 +717,6 @@ def get_data_from_pdf(dir_path: str, log: bool = False) -> pd.DataFrame:
         if log:
             print(f'[INFO] path: {path}')
 
-        pdf = pdfplumber.open(path)
         data_fields = ['well', 'cycle_count', 'process_solution', 'clay_powder',
                        'buffer', 'wood_flour', 'primary_solution', 'neftenol_waste_water',
                        'hes', 'squeeze', 'injection_pressure', 'squeeze_final']
@@ -724,17 +737,18 @@ def get_data_from_pdf(dir_path: str, log: bool = False) -> pd.DataFrame:
         ]
         injectivity = []
 
-        for page in pdf.pages:
-            text_act = page.extract_text(
-                layout=True,
-                use_text_flow=True
-            )
-            text_act = text_act.replace('c', 'с').replace('o', 'о')
-            injectivity += get_injectivity(text_act)
+        if is_docx:
+            text_act = text_from_docx(path)
+            extract_data_from_text(text_act, data_fields, data_get_functions, data, injectivity)
 
-            for field, func in zip(data_fields, data_get_functions):
-                if not data[field]:
-                    data[field] = func(text_act)
+        else:
+            pdf = pdfplumber.open(path)
+            for page in pdf.pages:
+                text_act = page.extract_text(
+                    layout=True,
+                    use_text_flow=True
+                )
+                extract_data_from_text(text_act, data_fields, data_get_functions, data, injectivity)
 
         for key, value in data.items():
             if not value:
