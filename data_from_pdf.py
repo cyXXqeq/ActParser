@@ -529,7 +529,18 @@ def get_hes(text: str):
         morph_pipeline(['эмульсия'])
     ).interpretation(Hes)
 
-    return get_field_value(hes_rule_1, text) or get_field_value(hes_rule_2, text)
+    hes_rule_3 = rule(
+        conc_rule.interpretation(Hes.concentration),
+        morph_pipeline(['гидрофобный']),
+        morph_pipeline(['эмульсия']),
+        PREP,
+        morph_pipeline(['объем']),
+        value_rule.interpretation(Hes.volume)
+    ).interpretation(Hes)
+
+    return (get_field_value(hes_rule_1, text)
+            or get_field_value(hes_rule_2, text)
+            or get_field_value(hes_rule_3, text))
 
 
 def get_squeeze(text: str):
