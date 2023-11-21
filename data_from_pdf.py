@@ -13,7 +13,7 @@ from yargy.rule import Rule
 
 from yargy_utils import (
     NUMERO_SIGN, show_json, INT, PREP, COLON, EQUAL_SIGN, PERCENT, DOT, UNIT,
-    DECIMAL, VOLUME, DASH, OPEN_BRACKET, CLOSE_BRACKET, TOKENIZER, ID_TOKENIZER, show_matches, SLASH
+    DECIMAL, VOLUME, DASH, OPEN_BRACKET, CLOSE_BRACKET, TOKENIZER, ID_TOKENIZER, show_matches, SLASH, CONJ
 )
 
 
@@ -489,6 +489,41 @@ def get_neftenol_and_waste_water(text: str):
     return get_field_value(neftenol_waste_water_rule_2, extract_text)
 
 
+def get_hes(text: str):
+    Hes = fact(
+        'Hes',
+        ['volume', 'concentration']
+    )
+
+    conc_rule = rule(
+        or_(rule(INT), DECIMAL),
+        PERCENT
+    )
+
+    hes_rule_1 = rule(
+        morph_pipeline(['ГЭР']),
+        PREP,
+        morph_pipeline(['объем']),
+        value_rule.interpretation(Hes.volume),
+        OPEN_BRACKET,
+        conc_rule.interpretation(Hes.concentration),
+        CLOSE_BRACKET
+    ).interpretation(Hes)
+
+    hes_rule_2 = rule(
+        morph_pipeline(['аналогично']),
+        PREP,
+        value_rule.interpretation(Hes.volume),
+        CONJ,
+        morph_pipeline(['закачать']),
+        conc_rule.interpretation(Hes.concentration),
+        morph_pipeline(['гидрофобный']),
+        morph_pipeline(['эмульсия'])
+    ).interpretation(Hes)
+
+    return get_field_value(hes_rule_1, text) or get_field_value(hes_rule_2, text)
+
+
 def get_squeeze(text: str):
     """
 
@@ -648,8 +683,8 @@ def get_data_from_pdf(dir_path: str, log: bool = False) -> pd.DataFrame:
         'Объем первичного раствора',
         'Объем нефтенола в первичном растворе',
         'Объем воды в первичном растворе',
-        # 'Объем ГЭР',
-        # 'Концентрация ПАВ в ГЭР',
+        'Объем ГЭР',
+        'Концентрация ПАВ в ГЭР',
         'Объем межцикловой продавки',
         'Давление закачки',
         'Объем финальной продавки',
@@ -667,7 +702,7 @@ def get_data_from_pdf(dir_path: str, log: bool = False) -> pd.DataFrame:
         pdf = pdfplumber.open(path)
         data_fields = ['well', 'cycle_count', 'process_solution', 'clay_powder',
                        'buffer', 'wood_flour', 'primary_solution', 'neftenol_waste_water',
-                       'squeeze', 'injection_pressure', 'squeeze_final']
+                       'hes', 'squeeze', 'injection_pressure', 'squeeze_final']
         data: dict[str, None | NoneTuple | Fact] = {field: None for field in data_fields}
         data_get_functions = [
             get_well_number,
@@ -678,6 +713,7 @@ def get_data_from_pdf(dir_path: str, log: bool = False) -> pd.DataFrame:
             get_wood_flour,
             get_primary_solution,
             get_neftenol_and_waste_water,
+            get_hes,
             get_squeeze,
             get_injection_pressure,
             get_squeeze_final,
@@ -729,6 +765,8 @@ def get_data_from_pdf(dir_path: str, log: bool = False) -> pd.DataFrame:
             data['primary_solution'].value,
             data['neftenol_waste_water'].neftenol,
             data['neftenol_waste_water'].waste_water,
+            data['hes'].volume,
+            data['hes'].concentration,
             data['squeeze'].value,
             data['injection_pressure'].value,
             data['squeeze_final'].value
