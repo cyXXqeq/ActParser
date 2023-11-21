@@ -13,7 +13,7 @@ from yargy.rule import Rule
 
 from yargy_utils import (
     NUMERO_SIGN, show_json, INT, PREP, COLON, EQUAL_SIGN, PERCENT, DOT, UNIT,
-    DECIMAL, VOLUME, DASH, OPEN_BRACKET, CLOSE_BRACKET, TOKENIZER, ID_TOKENIZER, show_matches, SLASH, CONJ
+    DECIMAL, VOLUME, DASH, OPEN_BRACKET, CLOSE_BRACKET, TOKENIZER, ID_TOKENIZER, SLASH, CONJ
 )
 
 
@@ -729,6 +729,7 @@ def get_data_from_pdf(dir_path: str, log: bool = False) -> pd.DataFrame:
                 layout=True,
                 use_text_flow=True
             )
+            text_act = text_act.replace('c', 'с').replace('o', 'о')
             injectivity += get_injectivity(text_act)
 
             for field, func in zip(data_fields, data_get_functions):
