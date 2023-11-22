@@ -11,7 +11,7 @@ from yargy.pipelines import morph_pipeline
 from yargy.predicates import caseless
 from yargy.rule import Rule
 
-from get_text_utils import text_from_docx
+from get_text_utils import text_from_docx, fill_data_list
 from yargy_utils import (
     NUMERO_SIGN, show_json, INT, PREP, COLON, EQUAL_SIGN, PERCENT, DOT, UNIT,
     DECIMAL, VOLUME, DASH, OPEN_BRACKET, CLOSE_BRACKET, TOKENIZER, ID_TOKENIZER, SLASH, CONJ
@@ -684,10 +684,22 @@ def extract_data_from_text(text_act, data_fields, data_get_functions, data, inje
             data[field] = func(text_act)
 
 
-def get_data_from_pdf(dir_path: str, log: bool = False, is_docx: bool = False) -> pd.DataFrame:
+def get_data_from_pdf(
+        dir_path: str,
+        columns: list[str],
+        data_fields: list[str],
+        data_get_functions: list,
+        act_kind: str,
+        log: bool = False,
+        is_docx: bool = False
+) -> pd.DataFrame:
     """
 
     :param dir_path: path to dir containing documents
+    :param columns:
+    :param data_fields:
+    :param data_get_functions:
+    :param act_kind:
     :param log: output log if true
     :param is_docx: docx file if True, else pdf file
     :return:
@@ -695,32 +707,6 @@ def get_data_from_pdf(dir_path: str, log: bool = False, is_docx: bool = False) -
 
     paths = [path_join(dir_path, file) for file in listdir(dir_path)]
     paths = list(filter(lambda x: not isdir(x), paths))
-    columns = [
-        'Скважина',
-        'Приемистость скважины на 1-й скорости',
-        'Приемистость скважины на 2-й скорости',
-        'Приемистость скважины на 3-й скорости',
-        'Количество циклов',
-        'Объем технонологического раствора',
-        'Объем раствора глинопорошка',
-        'Концентрация глинопорошка',
-        'Масса глинопопрошка',
-        'Объем буфера ',
-        'Объем раствора древесной муки',
-        'Концентрация древесной муки',
-        'Масса древесной муки',
-        'Объем первичного раствора',
-        'Объем нефтенола в первичном растворе',
-        'Объем воды в первичном растворе',
-        'Объем ГЭР',
-        'Концентрация ПАВ в ГЭР',
-        'Объем межцикловой продавки',
-        'Давление закачки',
-        'Объем финальной продавки',
-        'Приемистость скважины на 1-й скорости после закачки',
-        'Приемистость скважины на 2-й скорости после закачки',
-        'Приемистость скважины на 3-й скорости после закачки',
-    ]
     df = pd.DataFrame(columns=columns)
 
     for path in paths:
@@ -728,24 +714,7 @@ def get_data_from_pdf(dir_path: str, log: bool = False, is_docx: bool = False) -
         if log:
             print(f'[INFO] path: {path}')
 
-        data_fields = ['well', 'cycle_count', 'process_solution', 'clay_powder',
-                       'buffer', 'wood_flour', 'primary_solution', 'neftenol_waste_water',
-                       'hes', 'squeeze', 'injection_pressure', 'squeeze_final']
         data: dict[str, None | NoneTuple | Fact] = {field: None for field in data_fields}
-        data_get_functions = [
-            get_well_number,
-            get_cycle_count,
-            get_process_solution,
-            get_clay_powder,
-            get_buffer,
-            get_wood_flour,
-            get_primary_solution,
-            get_neftenol_and_waste_water,
-            get_hes,
-            get_squeeze,
-            get_injection_pressure,
-            get_squeeze_final,
-        ]
         injectivity = []
 
         if is_docx:
@@ -780,28 +749,7 @@ def get_data_from_pdf(dir_path: str, log: bool = False, is_docx: bool = False) -
                 inj_processed[i] = None
                 i += 1
 
-        data_list = [data['well'].value]
-        data_list += inj_processed[:3]
-        data_list += [
-            data['cycle_count'].value,
-            data['process_solution'].value,
-            data['clay_powder'].volume,
-            data['clay_powder'].concentration,
-            data['clay_powder'].mass,
-            data['buffer'].value,
-            data['wood_flour'].volume,
-            data['wood_flour'].concentration,
-            data['wood_flour'].mass,
-            data['primary_solution'].value,
-            data['neftenol_waste_water'].neftenol,
-            data['neftenol_waste_water'].waste_water,
-            data['hes'].volume,
-            data['hes'].concentration,
-            data['squeeze'].value,
-            data['injection_pressure'].value,
-            data['squeeze_final'].value
-        ]
-        data_list += inj_processed[3:]
+        data_list = fill_data_list(data, inj_processed, act_kind)
 
         df.loc[len(df)] = data_list
 
@@ -812,8 +760,3 @@ def get_data_from_pdf(dir_path: str, log: bool = False, is_docx: bool = False) -
     #     )
     # )
     return df
-
-
-if __name__ == '__main__':
-    get_data_from_pdf(path_join('/', 'home', 'cyxxqeq', 'Data4ActParser', 'test'), log=True)
-    # get_data_from_pdf(path_join('/', 'home', 'cyxxqeq', 'Data4ActParser', 'ВДС_Размеченные_акты'))
