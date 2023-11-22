@@ -65,8 +65,8 @@ if __name__ == '__main__':
     # end2 = time.time()
 
     data_to_excel(
-        path_join('documents', 'single_test'),
-        path_join('/', 'home', 'cyxxqeq', 'PycharmProjects', 'ActParser', 'results', 'single_test.xlsx'),
+        path_join('documents', 'test'),
+        path_join('/', 'home', 'cyxxqeq', 'PycharmProjects', 'ActParser', 'results', 'test.xlsx'),
         COLUMNS_HES,
         DATA_FIELDS_HES,
         DATA_GET_FUNCTIONS_HES,
