@@ -533,7 +533,7 @@ def get_hes(text: str):
     ).interpretation(Hes)
 
     hes_rule_3 = rule(
-        conc_rule.interpretation(Hes.concentration),
+        conc_rule.interpretation(Hes.concentration).optional(),
         morph_pipeline(['гидрофобный']),
         morph_pipeline(['эмульсия']),
         PREP,
