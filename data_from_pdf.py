@@ -14,7 +14,7 @@ from yargy.rule import Rule
 from get_text_utils import text_from_docx, fill_data_list
 from yargy_utils import (
     NUMERO_SIGN, show_json, INT, PREP, COLON, EQUAL_SIGN, PERCENT, DOT, UNIT,
-    DECIMAL, VOLUME, DASH, OPEN_BRACKET, CLOSE_BRACKET, TOKENIZER, ID_TOKENIZER, SLASH, CONJ
+    DECIMAL, VOLUME, DASH, OPEN_BRACKET, CLOSE_BRACKET, TOKENIZER, ID_TOKENIZER, SLASH, CONJ, INTORDEC
 )
 
 
@@ -461,13 +461,15 @@ def get_neftenol_and_waste_water(text: str):
 
     waste_water_rule = or_(
         rule(
-            morph_pipeline(['сточный', 'сточн', 'пресный', 'пресн']),
+            morph_pipeline(['сточный', 'сточн', 'сточ', 'пресный', 'пресн']),
+            DOT.optional(),
             SLASH.optional(),
             morph_pipeline(['вода'])
         ),
         rule(
-            morph_pipeline(['тех']),
-            DOT,
+            morph_pipeline(['облагороженный']).optional(),
+            morph_pipeline(['тех', 'технологический']),
+            DOT.optional(),
             morph_pipeline(['жидкость'])
         ),
         rule(
@@ -507,18 +509,26 @@ def get_hes(text: str):
     )
 
     conc_rule = rule(
-        or_(rule(INT), DECIMAL),
+        INTORDEC,
         PERCENT
     )
 
     hes_rule_1 = rule(
         morph_pipeline(['ГЭР']),
+        conc_rule.interpretation(Hes.concentration).optional(),
         PREP,
         morph_pipeline(['объем']),
         value_rule.interpretation(Hes.volume),
-        OPEN_BRACKET,
-        conc_rule.interpretation(Hes.concentration),
-        CLOSE_BRACKET
+        rule(
+            OPEN_BRACKET,
+            or_(
+                conc_rule.interpretation(Hes.concentration),
+                rule(
+                    INTORDEC, DASH, INTORDEC, PERCENT
+                ).interpretation(Hes.concentration)
+            ),
+            CLOSE_BRACKET
+        ).optional()
     ).interpretation(Hes)
 
     hes_rule_2 = rule(
@@ -536,14 +546,38 @@ def get_hes(text: str):
         conc_rule.interpretation(Hes.concentration).optional(),
         morph_pipeline(['гидрофобный']),
         morph_pipeline(['эмульсия']),
+        conc_rule.interpretation(Hes.concentration).optional(),
         PREP,
         morph_pipeline(['объем']),
-        value_rule.interpretation(Hes.volume)
+        value_rule.interpretation(Hes.volume),
+        or_(
+            rule(
+                PREP,
+                morph_pipeline(['концентрация']),
+                morph_pipeline(['НЗ-ТАТ']).optional(),
+                conc_rule.interpretation(Hes.concentration)
+            ),
+            rule(
+                OPEN_BRACKET,
+                conc_rule.interpretation(Hes.concentration),
+                CLOSE_BRACKET
+            )
+        ).optional()
     ).interpretation(Hes)
 
-    return (get_field_value(hes_rule_1, text)
-            or get_field_value(hes_rule_2, text)
-            or get_field_value(hes_rule_3, text))
+    hes_rule_4 = rule(
+        value_rule.interpretation(Hes.volume),
+        morph_pipeline(['гидрофобная']),
+        morph_pipeline(['эмульсия']),
+        PREP,
+        morph_pipeline(['концентрация']),
+        conc_rule.interpretation(Hes.concentration)
+    ).interpretation(Hes)
+
+    return (get_field_value(hes_rule_1, text, lines=False)
+            or get_field_value(hes_rule_2, text, lines=False)
+            or get_field_value(hes_rule_3, text, lines=False)
+            or get_field_value(hes_rule_4, text, lines=False))
 
 
 def get_squeeze(text: str):

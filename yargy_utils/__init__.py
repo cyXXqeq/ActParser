@@ -36,6 +36,7 @@ SLASH = eq('/')
 DECIMAL = rule(INT,
                or_(COMMA, DOT),
                INT)
+INTORDEC = or_(rule(INT), DECIMAL)
 ANY_NUM = rule(or_(
     rule(INT),
     DECIMAL
