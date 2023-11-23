@@ -469,6 +469,9 @@ def get_neftenol_and_waste_water(text: str):
             morph_pipeline(['тех']),
             DOT,
             morph_pipeline(['жидкость'])
+        ),
+        rule(
+            morph_pipeline(['сольводы'])
         )
     )
 
