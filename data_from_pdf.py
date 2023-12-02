@@ -42,6 +42,8 @@ def get_field_value(my_rule: Rule, text: str, all_match: bool = False, remainder
     if not lines:
         match = list(parser.findall(text.replace('\n', '')))
         if match:
+            if all_match:
+                return [m.fact for m in match]
             return match[0].fact
         return result
 
@@ -142,8 +144,7 @@ def get_injectivity(text: str):
     """
 
     speed_word = morph_pipeline(['скорость'])
-    # unit_word = morph_pipeline(['м3', 'м3/сут', 'атм'])
-    # pressure_word = rule(or_(caseless('Р'), caseless('P')))
+    pressure_word = rule(or_(caseless('Р'), caseless('P')))
 
     Injectivity = fact(
         'Injectivity',
@@ -155,23 +156,24 @@ def get_injectivity(text: str):
             rule(INT),
             rule(speed_word, COLON)
         ).interpretation(Injectivity.field_name),
-        # rule(
-        #     INT,
-        #     unit_word,
-        #     PREP,
-        #     pressure_word,
-        #     EQUAL_SIGN,
-        #     INT,
-        #     unit_word
-        # ).interpretation(Injectivity.value)
+        rule(
+            INT,
+            UNIT,
+            PREP,
+            pressure_word,
+            EQUAL_SIGN,
+            INT,
+            UNIT
+        ).interpretation(Injectivity.value)
     ).interpretation(Injectivity)
 
-    result = get_field_value(injectivity_rule, text, all_match=True, remainder=True)
+    # result = get_field_value(injectivity_rule, text, all_match=True, remainder=True)
+    result = get_field_value(injectivity_rule, text, lines=False, all_match=True)
     for i, res in enumerate(result):
         result[i].speed = res.field_name.split()[0]
-        value = res.value.replace(';', '').replace('.', '').replace('приемистость:', '').replace('(сid:9)', '')
-        value = ' '.join(value.split())
-        result[i].value = value
+        # value = res.value.replace(';', '').replace('.', '').replace('приемистость:', '').replace('(сid:9)', '')
+        # value = ' '.join(value.split())
+        # result[i].value = value
     return result
 
 
@@ -498,23 +500,30 @@ def get_neftenol_and_waste_water(text: str):
         morph_pipeline(['раствор'])
     )
 
-    neftenol_rule = morph_pipeline(['Нефтенол'])
+    neftenol_rule = rule(
+        OPEN_BRACKET.optional(),
+        morph_pipeline(['Нефтенол'])
+    )
 
-    waste_water_rule = or_(
-        rule(
-            morph_pipeline(['сточный', 'сточн', 'сточ', 'пресный', 'пресн', 'соль']),
-            DOT.optional(),
-            SLASH.optional(),
-            morph_pipeline(['вода'])
-        ),
-        rule(
-            morph_pipeline(['облагороженный']).optional(),
-            morph_pipeline(['тех', 'технологический']),
-            DOT.optional(),
-            morph_pipeline(['жидкость'])
-        ),
-        rule(
-            morph_pipeline(['сольводы'])
+    waste_water_rule = rule(
+        OPEN_BRACKET.optional(),
+        or_(
+            rule(
+                morph_pipeline(['сточный', 'сточн', 'сточ', 'пресный', 'пресн', 'соль']),
+                DOT.optional(),
+                SLASH.optional(),
+                morph_pipeline(['вода'])
+            ),
+            rule(
+                morph_pipeline(['облагороженный', 'обл']).optional(),
+                DOT.optional(),
+                morph_pipeline(['тех', 'технологический']),
+                DOT.optional(),
+                morph_pipeline(['жидкость'])
+            ),
+            rule(
+                morph_pipeline(['сольводы'])
+            )
         )
     )
 
