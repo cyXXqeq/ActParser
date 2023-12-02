@@ -1,5 +1,5 @@
 from os import listdir
-from os.path import join as path_join
+from os.path import join as path_join, isdir
 from pandas import DataFrame
 from pdf2docx import Converter
 
@@ -29,14 +29,15 @@ def get_resource_consumption(tables: list[list[list]], log: bool = False) -> Dat
             else:
                 break
 
-        df = df.loc[:, ['Материал (реагент)', 'Плотно сть г/см3', 'Количество']]
+        df.columns = [column.replace(' ', '') for column in df.columns]
+        df = df.loc[:, ['Материал(реагент)', 'Плотностьг/см3', 'Количество']]
         df = df.replace([''], 'н/д')
         df = df.fillna(value='н/д')
 
     return df
 
 
-def get_data_from_pdf_table(dir_path, log: bool = False):
+def get_data_from_pdf_table(dir_path: str, log: bool = False):
     """
 
     :param dir_path: путь к директории с документами
@@ -45,6 +46,7 @@ def get_data_from_pdf_table(dir_path, log: bool = False):
     """
 
     paths = [path_join(dir_path, file) for file in listdir(dir_path)]
+    paths = list(filter(lambda x: not isdir(x), paths))
     result = []
     columns = []
     for i in range(1, 8):

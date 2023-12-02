@@ -1,6 +1,6 @@
 from collections import namedtuple
 from os import listdir
-from os.path import join as path_join
+from os.path import join as path_join, isdir
 
 import pandas as pd
 import pdfplumber
@@ -11,9 +11,10 @@ from yargy.pipelines import morph_pipeline
 from yargy.predicates import caseless
 from yargy.rule import Rule
 
+from get_text_utils import text_from_docx, fill_data_list
 from yargy_utils import (
     NUMERO_SIGN, show_json, INT, PREP, COLON, EQUAL_SIGN, PERCENT, DOT, UNIT,
-    DECIMAL, VOLUME, DASH, OPEN_BRACKET, CLOSE_BRACKET, TOKENIZER, ID_TOKENIZER
+    DECIMAL, VOLUME, DASH, OPEN_BRACKET, CLOSE_BRACKET, TOKENIZER, ID_TOKENIZER, SLASH, CONJ, INTORDEC
 )
 
 
@@ -28,9 +29,9 @@ def show_from_act(my_rule: Rule, text: str) -> None:
 
 NoneTuple = namedtuple(
     'NoneTuple',
-    ['value', 'volume', 'concentration', 'mass', 'speed', 'field_name']
+    ['value', 'volume', 'concentration', 'mass', 'speed', 'field_name', 'neftenol', 'waste_water']
 )
-none_tuple = NoneTuple(None, None, None, None, None, None)
+none_tuple = NoneTuple(None, None, None, None, None, None, None, None)
 
 
 def get_field_value(my_rule: Rule, text: str, all_match: bool = False, remainder: bool = False,
@@ -73,7 +74,9 @@ def select_span_tokens(tokens, spans):
             yield token.value
 
 
-def get_field_value_with_skip(my_rule: Rule, text: str, lines: bool = True) -> list[str]:
+def get_field_value_with_skip(
+        my_rule: Rule, text: str, lines: bool = True, first_value: bool = True
+) -> list[str] | list[list[str]] | str:
     parser = Parser(my_rule, tokenizer=ID_TOKENIZER)
 
     if not lines:
@@ -81,7 +84,9 @@ def get_field_value_with_skip(my_rule: Rule, text: str, lines: bool = True) -> l
         matches = parser.findall(tokens)
         spans = [_.span for _ in matches]
         tokens_values = list(select_span_tokens(tokens, spans))
-        return tokens_values
+        return ' '.join(tokens_values)
+
+    results = []
 
     for line in text.split('\n'):
         tokens = list(TOKENIZER(line))
@@ -89,9 +94,18 @@ def get_field_value_with_skip(my_rule: Rule, text: str, lines: bool = True) -> l
         spans = [_.span for _ in matches]
         tokens_values = list(select_span_tokens(tokens, spans))
         if tokens_values:
-            return tokens_values
+            if first_value:
+                return tokens_values
+            results.append(tokens_values)
 
-    return []
+    if not first_value:
+        value = sum(results, [])
+        return ''.join([s + ' ' for s in value])
+
+    return results
+
+
+value_rule = rule(or_(rule(INT), DECIMAL), UNIT)
 
 
 def get_well_number(text: str):
@@ -154,7 +168,9 @@ def get_injectivity(text: str):
     result = get_field_value(injectivity_rule, text, all_match=True, remainder=True)
     for i, res in enumerate(result):
         result[i].speed = res.field_name.split()[0]
-        result[i].value = res.value.replace(';', '').replace('.', '')
+        value = res.value.replace(';', '').replace('.', '').replace('приемистость:', '')
+        value = ' '.join(value.split())
+        result[i].value = value
     return result
 
 
@@ -177,7 +193,7 @@ def get_process_solution(text: str):
         morph_pipeline(['ВДС']).optional(),
         PREP,
         VOLUME,
-        rule(or_(rule(INT), DECIMAL), UNIT).interpretation(ProcessSolution.value)
+        value_rule.interpretation(ProcessSolution.value)
     ).interpretation(ProcessSolution)
 
     return get_field_value(process_solution_rule, text)
@@ -294,10 +310,7 @@ def get_buffer(text: str):
     buffer_rule = rule(
         buffer_word,
         DASH.optional(),
-        rule(
-            or_(rule(INT), DECIMAL),
-            UNIT
-        ).interpretation(Buffer.value)
+        value_rule.interpretation(Buffer.value)
     ).interpretation(Buffer)
 
     buffer_rule_2 = rule(
@@ -306,10 +319,7 @@ def get_buffer(text: str):
         morph_pipeline(['химреагенты']).optional(),
         morph_pipeline(['продавка']),
         morph_pipeline(['составить']).optional(),
-        rule(
-            or_(rule(INT), DECIMAL),
-            UNIT
-        ).interpretation(Buffer.value)
+        value_rule.interpretation(Buffer.value)
     ).interpretation(Buffer)
 
     buffer_rule_3 = rule(
@@ -425,6 +435,151 @@ def get_wood_flour(text: str):
         )
 
 
+def get_primary_solution(text: str):
+    PrimarySolution = fact(
+        'PrimarySolution',
+        ['value']
+    )
+
+    primary_solution_rule = rule(
+        morph_pipeline(['первичный']),
+        morph_pipeline(['раствор']),
+        rule(PREP, morph_pipeline(['объем'])).optional(),
+        value_rule.interpretation(PrimarySolution.value)
+    ).interpretation(PrimarySolution)
+
+    return get_field_value(primary_solution_rule, text)
+
+
+def get_neftenol_and_waste_water(text: str):
+    NeftenolWasteWater = fact(
+        'NeftenolWasteWater',
+        ['neftenol', 'waste_water']
+    )
+
+    neftenol_rule = morph_pipeline(['Нефтенол'])
+
+    waste_water_rule = or_(
+        rule(
+            morph_pipeline(['сточный', 'сточн', 'сточ', 'пресный', 'пресн']),
+            DOT.optional(),
+            SLASH.optional(),
+            morph_pipeline(['вода'])
+        ),
+        rule(
+            morph_pipeline(['облагороженный']).optional(),
+            morph_pipeline(['тех', 'технологический']),
+            DOT.optional(),
+            morph_pipeline(['жидкость'])
+        ),
+        rule(
+            morph_pipeline(['сольводы'])
+        )
+    )
+
+    neftenol_waste_water_rule = rule(
+        value_rule,
+        or_(
+            neftenol_rule,
+            waste_water_rule
+        )
+    )
+
+    neftenol_waste_water_rule_2 = rule(
+        value_rule.interpretation(NeftenolWasteWater.neftenol),
+        neftenol_rule,
+        value_rule.interpretation(NeftenolWasteWater.waste_water),
+        waste_water_rule
+    ).interpretation(NeftenolWasteWater)
+
+    extract_text = get_field_value_with_skip(
+        neftenol_waste_water_rule,
+        text,
+        lines=False,
+        first_value=False
+    )
+
+    return get_field_value(neftenol_waste_water_rule_2, extract_text)
+
+
+def get_hes(text: str):
+    Hes = fact(
+        'Hes',
+        ['volume', 'concentration']
+    )
+
+    conc_rule = rule(
+        INTORDEC,
+        PERCENT
+    )
+
+    hes_rule_1 = rule(
+        morph_pipeline(['ГЭР']),
+        conc_rule.interpretation(Hes.concentration).optional(),
+        PREP,
+        morph_pipeline(['объем']),
+        value_rule.interpretation(Hes.volume),
+        rule(
+            OPEN_BRACKET,
+            or_(
+                conc_rule.interpretation(Hes.concentration),
+                rule(
+                    INTORDEC, DASH, INTORDEC, PERCENT
+                ).interpretation(Hes.concentration)
+            ),
+            CLOSE_BRACKET
+        ).optional()
+    ).interpretation(Hes)
+
+    hes_rule_2 = rule(
+        morph_pipeline(['аналогично']),
+        PREP,
+        value_rule.interpretation(Hes.volume),
+        CONJ,
+        morph_pipeline(['закачать']),
+        conc_rule.interpretation(Hes.concentration),
+        morph_pipeline(['гидрофобный']),
+        morph_pipeline(['эмульсия'])
+    ).interpretation(Hes)
+
+    hes_rule_3 = rule(
+        conc_rule.interpretation(Hes.concentration).optional(),
+        morph_pipeline(['гидрофобный']),
+        morph_pipeline(['эмульсия']),
+        conc_rule.interpretation(Hes.concentration).optional(),
+        PREP,
+        morph_pipeline(['объем']),
+        value_rule.interpretation(Hes.volume),
+        or_(
+            rule(
+                PREP,
+                morph_pipeline(['концентрация']),
+                morph_pipeline(['НЗ-ТАТ']).optional(),
+                conc_rule.interpretation(Hes.concentration)
+            ),
+            rule(
+                OPEN_BRACKET,
+                conc_rule.interpretation(Hes.concentration),
+                CLOSE_BRACKET
+            )
+        ).optional()
+    ).interpretation(Hes)
+
+    hes_rule_4 = rule(
+        value_rule.interpretation(Hes.volume),
+        morph_pipeline(['гидрофобная']),
+        morph_pipeline(['эмульсия']),
+        PREP,
+        morph_pipeline(['концентрация']),
+        conc_rule.interpretation(Hes.concentration)
+    ).interpretation(Hes)
+
+    return (get_field_value(hes_rule_1, text, lines=False)
+            or get_field_value(hes_rule_2, text, lines=False)
+            or get_field_value(hes_rule_3, text, lines=False)
+            or get_field_value(hes_rule_4, text, lines=False))
+
+
 def get_squeeze(text: str):
     """
 
@@ -442,9 +597,7 @@ def get_squeeze(text: str):
     squeeze_rule = rule(
         squeeze_word,
         rule(PREP, VOLUME).optional(),
-        rule(
-            or_(rule(INT), DECIMAL), UNIT
-        ).interpretation(Squeeze.value)
+        value_rule.interpretation(Squeeze.value)
     ).interpretation(Squeeze)
 
     squeeze_rule_2 = rule(
@@ -510,51 +663,87 @@ def get_squeeze_final(text: str):
     :return:
     """
 
+    squeeze_word = morph_pipeline(['продавить'])
+
     SqueezeFinal = fact(
         'SqueezeFinal',
         ['value']
     )
 
     squeeze_final_rule = rule(
-        morph_pipeline(['продавить']),
-        rule(
-            or_(rule(INT), DECIMAL), UNIT
-        ).interpretation(SqueezeFinal.value)
+        squeeze_word,
+        value_rule.interpretation(SqueezeFinal.value)
     ).interpretation(SqueezeFinal)
 
-    return get_field_value(squeeze_final_rule, text)
+    result = get_field_value(squeeze_final_rule, text)
+
+    if result:
+        return result
+
+    squeeze_final_rule_2_1 = rule(
+        PREP,
+        morph_pipeline(['объем']),
+        value_rule.interpretation(SqueezeFinal.value)
+    )
+
+    squeeze_final_rule_2 = or_(
+        squeeze_word,
+        squeeze_final_rule_2_1
+    ).interpretation(SqueezeFinal)
+
+    squeeze_final_rule_3 = rule(
+        squeeze_word,
+        squeeze_final_rule_2_1
+    ).interpretation(SqueezeFinal)
+
+    extract_text = get_field_value_with_skip(
+        squeeze_final_rule_2,
+        text,
+        lines=True,
+        first_value=False
+    )
+
+    if not extract_text:
+        return result
+
+    return get_field_value(
+        squeeze_final_rule_3,
+        extract_text
+    )
 
 
-def get_data_from_pdf(dir_path: str, log: bool = False) -> pd.DataFrame:
+def extract_data_from_text(text_act, data_fields, data_get_functions, data, injectivity):
+    text_act = text_act.replace('c', 'с').replace('o', 'о')
+    injectivity += get_injectivity(text_act)
+
+    for field, func in zip(data_fields, data_get_functions):
+        if not data[field]:
+            data[field] = func(text_act)
+
+
+def get_data_from_pdf(
+        dir_path: str,
+        columns: list[str],
+        data_fields: list[str],
+        data_get_functions: list,
+        act_kind: str,
+        log: bool = False,
+        is_docx: bool = False
+) -> pd.DataFrame:
     """
 
-    :param dir_path:
-    :param log:
+    :param dir_path: path to dir containing documents
+    :param columns:
+    :param data_fields:
+    :param data_get_functions:
+    :param act_kind:
+    :param log: output log if true
+    :param is_docx: docx file if True, else pdf file
     :return:
     """
 
     paths = [path_join(dir_path, file) for file in listdir(dir_path)]
-    columns = [
-        'Скважина',
-        'Приемистость скважины на 1-й скорости',
-        'Приемистость скважины на 2-й скорости',
-        'Приемистость скважины на 3-й скорости',
-        'Количество циклов',
-        'Объем технонологического раствора',
-        'Объем раствора глинопорошка',
-        'Концентрация глинопорошка',
-        'Масса глинопопрошка',
-        'Объем буфера ',
-        'Объем раствора древесной муки',
-        'Концентрация древесной муки',
-        'Масса древесной муки',
-        'Объем межцикловой продавки',
-        'Давление закачки',
-        'Объем финальной продавки',
-        'Приемистость скважины на 1-й скорости после закачки',
-        'Приемистость скважины на 2-й скорости после закачки',
-        'Приемистость скважины на 3-й скорости после закачки',
-    ]
+    paths = list(filter(lambda x: not isdir(x), paths))
     df = pd.DataFrame(columns=columns)
 
     for path in paths:
@@ -562,33 +751,21 @@ def get_data_from_pdf(dir_path: str, log: bool = False) -> pd.DataFrame:
         if log:
             print(f'[INFO] path: {path}')
 
-        pdf = pdfplumber.open(path)
-        data_fields = ['well', 'cycle_count', 'process_solution', 'clay_powder',
-                       'buffer', 'wood_flour', 'squeeze', 'injection_pressure', 'squeeze_final']
         data: dict[str, None | NoneTuple | Fact] = {field: None for field in data_fields}
-        data_get_functions = [
-            get_well_number,
-            get_cycle_count,
-            get_process_solution,
-            get_clay_powder,
-            get_buffer,
-            get_wood_flour,
-            get_squeeze,
-            get_injection_pressure,
-            get_squeeze_final,
-        ]
         injectivity = []
 
-        for page in pdf.pages:
-            text_act = page.extract_text(
-                layout=True,
-                use_text_flow=True
-            )
-            injectivity += get_injectivity(text_act)
+        if is_docx:
+            text_act = text_from_docx(path)
+            extract_data_from_text(text_act, data_fields, data_get_functions, data, injectivity)
 
-            for field, func in zip(data_fields, data_get_functions):
-                if not data[field]:
-                    data[field] = func(text_act)
+        else:
+            pdf = pdfplumber.open(path)
+            for page in pdf.pages:
+                text_act = page.extract_text(
+                    layout=True,
+                    use_text_flow=True
+                )
+                extract_data_from_text(text_act, data_fields, data_get_functions, data, injectivity)
 
         for key, value in data.items():
             if not value:
@@ -609,23 +786,7 @@ def get_data_from_pdf(dir_path: str, log: bool = False) -> pd.DataFrame:
                 inj_processed[i] = None
                 i += 1
 
-        data_list = [data['well'].value]
-        data_list += inj_processed[:3]
-        data_list += [
-            data['cycle_count'].value,
-            data['process_solution'].value,
-            data['clay_powder'].volume,
-            data['clay_powder'].concentration,
-            data['clay_powder'].mass,
-            data['buffer'].value,
-            data['wood_flour'].volume,
-            data['wood_flour'].concentration,
-            data['wood_flour'].mass,
-            data['squeeze'].value,
-            data['injection_pressure'].value,
-            data['squeeze_final'].value
-        ]
-        data_list += inj_processed[3:]
+        data_list = fill_data_list(data, inj_processed, act_kind)
 
         df.loc[len(df)] = data_list
 
@@ -636,8 +797,3 @@ def get_data_from_pdf(dir_path: str, log: bool = False) -> pd.DataFrame:
     #     )
     # )
     return df
-
-
-if __name__ == '__main__':
-    get_data_from_pdf(path_join('/', 'home', 'cyxxqeq', 'Data4ActParser', 'test'), log=True)
-    # get_data_from_pdf(path_join('/', 'home', 'cyxxqeq', 'Data4ActParser', 'ВДС_Размеченные_акты'))

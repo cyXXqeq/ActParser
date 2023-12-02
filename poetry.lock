@@ -215,6 +215,20 @@ files = [
 ]
 
 [[package]]
+name = "docx"
+version = "0.2.4"
+description = "The docx module creates, reads and writes Microsoft Office Word 2007 docx files"
+optional = false
+python-versions = "*"
+files = [
+    {file = "docx-0.2.4.tar.gz", hash = "sha256:9d7595eac6e86cda0b7136a2995318d039c1f3eaa368a3300805abbbe5dc8877"},
+]
+
+[package.dependencies]
+lxml = "*"
+Pillow = ">=2.0"
+
+[[package]]
 name = "et-xmlfile"
 version = "1.1.0"
 description = "An implementation of lxml.xmlfile for the standard library"
@@ -539,7 +553,10 @@ files = [
 ]
 
 [package.dependencies]
-numpy = {version = ">=1.23.2", markers = "python_version == \"3.11\""}
+numpy = [
+    {version = ">=1.23.2", markers = "python_version == \"3.11\""},
+    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
+]
 python-dateutil = ">=2.8.2"
 pytz = ">=2020.1"
 tzdata = ">=2022.1"
@@ -905,5 +922,5 @@ pymorphy2 = "*"
 
 [metadata]
 lock-version = "2.0"
-python-versions = "3.11.5"
-content-hash = "2887bc63b033d4cc4590d82d82695882f9957b4b3200e11bdd5b441c3b912908"
+python-versions = ">=3.11,<=3.12"
+content-hash = "4171f346ba244c26bf4b2a4adb5f9a447646c3cd34cdad21a0e1671d20806ecf"
