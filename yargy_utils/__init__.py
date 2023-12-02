@@ -15,6 +15,8 @@ NOUN = gram('NOUN')
 ADJF = gram('ADJF')
 # краткое прилагательное
 ADJS = gram('ADJS')
+# любая буква русского алфавита
+ANY_LETTER = morph_pipeline(list('абвгдеёжзийклмнопрстуфхцчшщьыъэюя'))
 
 # предлог
 PREP = gram('PREP')

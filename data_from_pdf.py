@@ -14,7 +14,7 @@ from yargy.rule import Rule
 from get_text_utils import text_from_docx, fill_data_list
 from yargy_utils import (
     NUMERO_SIGN, show_json, INT, PREP, COLON, EQUAL_SIGN, PERCENT, DOT, UNIT,
-    DECIMAL, VOLUME, DASH, OPEN_BRACKET, CLOSE_BRACKET, TOKENIZER, ID_TOKENIZER, SLASH, CONJ, INTORDEC, PLUS
+    DECIMAL, VOLUME, DASH, OPEN_BRACKET, CLOSE_BRACKET, TOKENIZER, ID_TOKENIZER, SLASH, CONJ, INTORDEC, PLUS, ANY_LETTER
 )
 
 
@@ -113,9 +113,6 @@ value_opt_rule = rule(or_(DECIMAL, rule(INT)), UNIT.optional())
 
 def get_well_number(text: str):
     """
-    Название поля: Скважина;
-    Значение: число;
-    Примечание: универсально
 
     :param text: Текст, из которого будет извлекаться номер скважины
     :return: номер скважины
@@ -130,10 +127,16 @@ def get_well_number(text: str):
         rule(well_word, NUMERO_SIGN).interpretation(Well.field_name),
         rule(INT)
     ).interpretation(Well)
+    well_rule_2 = rule(
+        well_word,
+        DOT.optional(),
+        COLON.optional(),
+        rule(INT, ANY_LETTER.optional()).interpretation(Well.value)
+    ).interpretation(Well)
 
     result = get_field_value(well_rule, text, remainder=True)
 
-    return result
+    return result or get_field_value(well_rule_2, text)
 
 
 def get_injectivity(text: str):
