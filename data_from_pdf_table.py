@@ -4,6 +4,13 @@ from pandas import DataFrame
 from pdf2docx import Converter
 
 
+def is_mismatched(row):
+    for i in row:
+        if not i:
+            return True
+    return False
+
+
 def get_resource_consumption(tables: list[list[list]]) -> DataFrame:
     """
     :param tables: Таблицы в формате списка матриц, где матрицы - это список списков
@@ -12,6 +19,11 @@ def get_resource_consumption(tables: list[list[list]]) -> DataFrame:
 
     start = 0
     df = DataFrame()
+
+    for table in tables:
+        for row in table:
+            print(row)
+        print('\n')
 
     for i, table in enumerate(tables):
         if {'Материал (реагент)', 'Количество'}.issubset(table[0]):
@@ -25,15 +37,18 @@ def get_resource_consumption(tables: list[list[list]]) -> DataFrame:
         while start < len(tables):
             if len(tables[start][0]) == 9:
                 for row in tables[start]:
-                    df.loc[len(df)] = row
+                    if not is_mismatched(row):
+                        df.loc[len(df)] = row
                 start += 1
             else:
                 break
 
-        df.columns = [column.replace(' ', '') for column in df.columns]
-        df = df.loc[:, ['Материал(реагент)', 'Плотностьг/см3', 'Количество']]
-        df = df.replace([''], 'н/д')
-        df = df.fillna(value='н/д')
+        if not df.empty:
+            df.columns = [column.replace(' ', '') for column in df.columns]
+            # df = df.rename(columns={'Плотнос': 'Плотностьг/см3'})
+            df = df.loc[:, ['Материал(реагент)', 'Плотностьг/см3', 'Количество']]
+            df = df.replace([''], 'н/д')
+            df = df.fillna(value='н/д')
 
     return df
 
