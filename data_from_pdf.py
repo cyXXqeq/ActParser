@@ -8,13 +8,13 @@ from yargy import rule, Parser, or_
 from yargy.interpretation import fact
 from yargy.interpretation.fact import Fact
 from yargy.pipelines import morph_pipeline
-from yargy.predicates import caseless
+from yargy.predicates import caseless, eq
 from yargy.rule import Rule
 
 from get_text_utils import text_from_docx, fill_data_list
 from yargy_utils import (
     NUMERO_SIGN, show_json, INT, PREP, COLON, EQUAL_SIGN, PERCENT, DOT, UNIT,
-    DECIMAL, VOLUME, DASH, OPEN_BRACKET, CLOSE_BRACKET, TOKENIZER, ID_TOKENIZER, SLASH, CONJ, INTORDEC
+    DECIMAL, VOLUME, DASH, OPEN_BRACKET, CLOSE_BRACKET, TOKENIZER, ID_TOKENIZER, SLASH, CONJ, INTORDEC, PLUS
 )
 
 
@@ -168,9 +168,10 @@ def get_injectivity(text: str):
     result = get_field_value(injectivity_rule, text, all_match=True, remainder=True)
     for i, res in enumerate(result):
         result[i].speed = res.field_name.split()[0]
-        value = res.value.replace(';', '').replace('.', '').replace('приемистость:', '')
+        value = res.value.replace(';', '').replace('.', '').replace('приемистость:', '').replace('(сid:9)', '')
         value = ' '.join(value.split())
         result[i].value = value
+    print(result)
     return result
 
 
@@ -271,7 +272,24 @@ def get_clay_powder(text: str):
         clay_powder_rule_2_2
     )
 
+    weird_volume_rule = rule(INT, eq('ц'), PREP, value_rule)
+
+    clay_powder_rule_3 = rule(
+        clay_powder_word,
+        OPEN_BRACKET,
+        rule(
+            weird_volume_rule,
+            rule(PLUS, weird_volume_rule).optional()
+        ).interpretation(ClayPowder.volume),
+        CLOSE_BRACKET
+    ).interpretation(ClayPowder)
+
     value = get_field_value(clay_powder_rule, text)
+
+    if value:
+        return value
+
+    value = get_field_value(clay_powder_rule_3, text)
 
     if value:
         return value
@@ -325,7 +343,7 @@ def get_buffer(text: str):
     buffer_rule_3 = rule(
         caseless('V'),
         EQUAL_SIGN,
-        DECIMAL.interpretation(Buffer.value)
+        or_(rule(INT), DECIMAL).interpretation(Buffer.value)
     )
 
     value = get_field_value(buffer_rule, text)
@@ -344,10 +362,7 @@ def get_buffer(text: str):
     )
 
     if value:
-        result = ''
-
-        for s in value:
-            result += s + ' '
+        result = ' '.join(value)
 
         return get_field_value(
             rule(
@@ -367,7 +382,11 @@ def get_wood_flour(text: str):
 
     wood_flour_word = or_(
         morph_pipeline(['ДМ']),
-        rule(morph_pipeline(['древесная']), morph_pipeline(['мука']))
+        rule(
+            morph_pipeline(['древесная']),
+            rule(CONJ, morph_pipeline(['доломитовый'])).optional(),
+            morph_pipeline(['мука'])
+        )
     )
 
     WoodFlour = fact(
@@ -382,12 +401,17 @@ def get_wood_flour(text: str):
         rule(
             DECIMAL,
             rule(DASH, DECIMAL).optional(),
+            rule(DASH, DECIMAL).optional(),
             PERCENT
         ).interpretation(WoodFlour.concentration),
         CLOSE_BRACKET,
         rule(
             DASH,
-            rule(DECIMAL, UNIT).interpretation(WoodFlour.mass)
+            rule(
+                DECIMAL,
+                rule(PLUS, DECIMAL).optional(),
+                UNIT
+            ).interpretation(WoodFlour.mass)
         ).optional()
     ).interpretation(WoodFlour)
 
@@ -411,9 +435,21 @@ def get_wood_flour(text: str):
         wood_flour_rule_2_2
     )
 
+    weird_volume_rule = rule(INT, eq('ц'), PREP, value_rule)
+
+    wood_flour_rule_3 = rule(
+        wood_flour_word,
+        OPEN_BRACKET,
+        rule(
+            weird_volume_rule,
+            rule(PLUS, weird_volume_rule).optional()
+        ).interpretation(WoodFlour.volume),
+        CLOSE_BRACKET
+    ).interpretation(WoodFlour)
+
     result = (
-            get_field_value(wood_flour_rule, text)
-            or get_field_value(wood_flour_rule, text, lines=False)
+            get_field_value(wood_flour_rule, text, lines=False)
+            or get_field_value(wood_flour_rule_3, text, lines=False)
     )
     if result:
         return result
@@ -597,13 +633,14 @@ def get_squeeze(text: str):
     squeeze_rule = rule(
         squeeze_word,
         rule(PREP, VOLUME).optional(),
+        DASH.optional(),
         value_rule.interpretation(Squeeze.value)
     ).interpretation(Squeeze)
 
     squeeze_rule_2 = rule(
         caseless('V'),
         EQUAL_SIGN,
-        DECIMAL.interpretation(Squeeze.value)
+        or_(rule(INT), DECIMAL).interpretation(Squeeze.value)
     )
 
     result = get_field_value(squeeze_rule, text)
@@ -618,10 +655,7 @@ def get_squeeze(text: str):
     )
 
     if value:
-        result = ''
-
-        for s in value:
-            result += s + ' '
+        result = ''.join(value)
 
         return get_field_value(
             rule(
@@ -736,7 +770,7 @@ def get_data_from_pdf(
     :param columns:
     :param data_fields:
     :param data_get_functions:
-    :param act_kind:
+    :param act_kind: VDS or HES
     :param log: output log if true
     :param is_docx: docx file if True, else pdf file
     :return:
@@ -791,9 +825,5 @@ def get_data_from_pdf(
         df.loc[len(df)] = data_list
 
     df = df.fillna(value='н/д')
-    # df.to_excel(
-    #     path_join(
-    #         '/', 'home', 'cyxxqeq', 'PycharmProjects', 'ActParser', 'results', 'data_from_pdf.xlsx'
-    #     )
-    # )
+
     return df

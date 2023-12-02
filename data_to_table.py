@@ -10,9 +10,6 @@ from data_from_pdf_table import get_data_from_pdf_table
 def data_to_excel(
         dir_path: str,
         table_path: str,
-        columns: list[str],
-        data_fields: list[str],
-        data_get_functions: list,
         act_kind: str,
         log: bool = False,
         is_docx: bool = False
@@ -21,13 +18,24 @@ def data_to_excel(
 
     :param dir_path: путь к директории с актами
     :param table_path: путь к итоговой таблице (результату)
-    :param columns:
-    :param data_fields:
-    :param data_get_functions:
-    :param act_kind:
+    :param act_kind: VDS or HES
     :param log: вывод логов
     :param is_docx: docx file if True else pdf file
     """
+
+    if act_kind == 'VDS':
+        columns = COLUMNS_VDS
+        data_fields = DATA_FIELDS_VDS
+        data_get_functions = DATA_GET_FUNCTIONS_VDS
+
+    elif act_kind == 'HES':
+        columns = COLUMNS_HES
+        data_fields = DATA_FIELDS_HES
+        data_get_functions = DATA_GET_FUNCTIONS_HES
+
+    else:
+        raise AttributeError("act_kind must be 'VDS' or 'HES'")
+
     text_data = get_data_from_pdf(
         dir_path,
         columns,

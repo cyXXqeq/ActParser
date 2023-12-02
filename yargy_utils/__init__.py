@@ -43,6 +43,7 @@ ANY_NUM = rule(or_(
 ))
 COLON = eq(':')
 EQUAL_SIGN = eq('=')
+PLUS = eq('+')
 OPEN_BRACKET = eq('(')
 CLOSE_BRACKET = eq(')')
 DASH = eq('-')
