@@ -1,4 +1,3 @@
-import time
 from os.path import join as path_join
 
 from act_variables import COLUMNS_VDS, DATA_FIELDS_VDS, DATA_GET_FUNCTIONS_VDS, COLUMNS_HES, DATA_FIELDS_HES, \
@@ -53,43 +52,9 @@ def data_to_excel(
 
 
 if __name__ == '__main__':
-    # start1 = time.time()
-    # data_to_excel(
-    #     path_join('/', 'home', 'cyxxqeq', 'Data4ActParser', 'ВДС_Размеченные_акты'),
-    #     path_join('/', 'home', 'cyxxqeq', 'PycharmProjects', 'ActParser', 'results', 'labeled_result.xlsx')
-    # )
-    # end1 = time.time()
-
-    # start2 = time.time()
-    # data_to_excel(
-    #     path_join('/', 'home', 'cyxxqeq', 'Data4ActParser', 'test'),
-    #     path_join('/', 'home', 'cyxxqeq', 'PycharmProjects', 'ActParser', 'results', 'result.xlsx'),
-    #     COLUMNS_VDS,
-    #     DATA_FIELDS_VDS,
-    #     DATA_GET_FUNCTIONS_VDS,
-    #     'VDS',
-    #     log=True
-    # )
-    # end2 = time.time()
-
     data_to_excel(
         path_join('documents', 'single_test'),
         path_join('/', 'home', 'cyxxqeq', 'PycharmProjects', 'ActParser', 'results', 'single_test.xlsx'),
-        COLUMNS_HES,
-        DATA_FIELDS_HES,
-        DATA_GET_FUNCTIONS_HES,
         'HES',
         log=True
     )
-
-    # test zone
-    # start_test = time.time()
-    # data_to_excel(
-    #     path_join('/', 'home', 'cyxxqeq', 'Data4ActParser', 'test'),
-    #     path_join('/', 'home', 'cyxxqeq', 'PycharmProjects', 'ActParser', 'results', 'test_result.xlsx'),
-    #     log=True
-    # )
-    # print(time.time() - start_test)
-
-    # print(f'Время выполнения на размеченных актах: {int(end1 - start1)} секунд')
-    # print(f'Время выполнения на всех актах: {int(end2 - start2)} секунд')

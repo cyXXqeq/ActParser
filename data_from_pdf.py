@@ -105,7 +105,8 @@ def get_field_value_with_skip(
     return results
 
 
-value_rule = rule(or_(rule(INT), DECIMAL), UNIT)
+value_rule = rule(or_(DECIMAL, rule(INT)), UNIT)
+value_opt_rule = rule(or_(DECIMAL, rule(INT)), UNIT.optional())
 
 
 def get_well_number(text: str):
@@ -171,7 +172,6 @@ def get_injectivity(text: str):
         value = res.value.replace(';', '').replace('.', '').replace('приемистость:', '').replace('(сid:9)', '')
         value = ' '.join(value.split())
         result[i].value = value
-    print(result)
     return result
 
 
@@ -493,11 +493,16 @@ def get_neftenol_and_waste_water(text: str):
         ['neftenol', 'waste_water']
     )
 
+    solution_rule = rule(
+        morph_pipeline(['первичный']),
+        morph_pipeline(['раствор'])
+    )
+
     neftenol_rule = morph_pipeline(['Нефтенол'])
 
     waste_water_rule = or_(
         rule(
-            morph_pipeline(['сточный', 'сточн', 'сточ', 'пресный', 'пресн']),
+            morph_pipeline(['сточный', 'сточн', 'сточ', 'пресный', 'пресн', 'соль']),
             DOT.optional(),
             SLASH.optional(),
             morph_pipeline(['вода'])
@@ -513,18 +518,20 @@ def get_neftenol_and_waste_water(text: str):
         )
     )
 
-    neftenol_waste_water_rule = rule(
-        value_rule,
-        or_(
-            neftenol_rule,
-            waste_water_rule
+    neftenol_waste_water_rule = or_(
+        solution_rule,
+        rule(
+            value_opt_rule,
+            or_(neftenol_rule, waste_water_rule)
         )
     )
 
     neftenol_waste_water_rule_2 = rule(
-        value_rule.interpretation(NeftenolWasteWater.neftenol),
+        morph_pipeline(['первичный']),
+        morph_pipeline(['раствор']),
+        value_opt_rule.interpretation(NeftenolWasteWater.neftenol),
         neftenol_rule,
-        value_rule.interpretation(NeftenolWasteWater.waste_water),
+        value_opt_rule.interpretation(NeftenolWasteWater.waste_water),
         waste_water_rule
     ).interpretation(NeftenolWasteWater)
 

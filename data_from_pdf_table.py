@@ -4,10 +4,9 @@ from pandas import DataFrame
 from pdf2docx import Converter
 
 
-def get_resource_consumption(tables: list[list[list]], log: bool = False) -> DataFrame:
+def get_resource_consumption(tables: list[list[list]]) -> DataFrame:
     """
     :param tables: Таблицы в формате списка матриц, где матрицы - это список списков
-    :param log: вывод логов
     :return: DataFrame с данными о материалах, пустой DataFrame, если данные не найдутся
     """
 
@@ -16,11 +15,13 @@ def get_resource_consumption(tables: list[list[list]], log: bool = False) -> Dat
 
     for i, table in enumerate(tables):
         if {'Материал (реагент)', 'Количество'}.issubset(table[0]):
-            df = DataFrame(table[1:], columns=table[0])
+            df = DataFrame(table, columns=table[0])
             start = i + 1
             break
 
     if not df.empty:
+        df = df.drop(index=0)
+
         while start < len(tables):
             if len(tables[start][0]) == 9:
                 for row in tables[start]:
@@ -63,7 +64,7 @@ def get_data_from_pdf_table(dir_path: str, log: bool = False):
         cv = Converter(path)
         tables = cv.extract_tables()
         cv.close()
-        result.append(get_resource_consumption(tables, log=False))
+        result.append(get_resource_consumption(tables))
 
     fails: list[str] = []
 
@@ -93,4 +94,4 @@ def get_data_from_pdf_table(dir_path: str, log: bool = False):
 
 
 if __name__ == '__main__':
-    get_data_from_pdf_table(path_join('/', 'home', 'cyxxqeq', 'Data4ActParser', 'ВДС'), log=True)
+    get_data_from_pdf_table(path_join('documents', 'single_test'), log=True)
