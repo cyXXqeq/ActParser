@@ -59,8 +59,11 @@ ABBR = and_(
     length_eq(3),
     is_capitalized()
 )
-# Стандартный токенизатор. Удаляем правило для переводом строк.
+# Стандартный токенизатор. Удаляем правило для переводов строк.
 # Обычно токены с '\n' только мешаются.
 TOKENIZER = MorphTokenizer().remove_types(EOL)
 # IdTokenizer
 ID_TOKENIZER = IdTokenizer(TOKENIZER)
+
+VALUE_RULE = rule(or_(DECIMAL, rule(INT)), UNIT)
+VALUE_OPT_RULE = rule(or_(DECIMAL, rule(INT)), UNIT.optional())
