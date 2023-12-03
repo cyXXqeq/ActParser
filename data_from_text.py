@@ -3,7 +3,6 @@ from os import listdir
 from os.path import join as path_join, isdir
 
 import pandas as pd
-import pdfplumber
 from yargy import rule, or_
 from yargy.interpretation import fact
 from yargy.interpretation.fact import Fact
@@ -11,6 +10,7 @@ from yargy.pipelines import morph_pipeline
 from yargy.predicates import caseless, eq
 
 from utils import text_from_docx, fill_data_list
+from utils.get_text import text_from_pdf
 from yargy_utils import (
     NUMERO_SIGN, INT, PREP, COLON, EQUAL_SIGN, PERCENT, DOT, UNIT,
     DECIMAL, VOLUME, DASH, OPEN_BRACKET, CLOSE_BRACKET, SLASH, CONJ,
@@ -688,14 +688,13 @@ def extract_data_from_text(text_act, data_fields, data_get_functions, data, inje
             data[field] = func(text_act)
 
 
-def get_data_from_pdf(
+def get_data_from_text(
         dir_path: str,
         columns: list[str],
         data_fields: list[str],
         data_get_functions: list,
         act_kind: str,
         log: bool = False,
-        is_docx: bool = False
 ) -> pd.DataFrame:
     """
 
@@ -721,18 +720,17 @@ def get_data_from_pdf(
         data: dict[str, None | NoneTuple | Fact] = {field: None for field in data_fields}
         injectivity = []
 
-        if is_docx:
-            text_act = text_from_docx(path)
-            extract_data_from_text(text_act, data_fields, data_get_functions, data, injectivity)
+        match path.split('.')[-1].lower():
+            case 'docx':
+                text_act = text_from_docx(path)
+            case 'pdf':
+                text_act = text_from_pdf(path)
+            case other:
+                if log:
+                    print(f'[INFO] filetype "{other}" not supported')
+                continue
 
-        else:
-            pdf = pdfplumber.open(path)
-            for page in pdf.pages:
-                text_act = page.extract_text(
-                    layout=True,
-                    use_text_flow=True
-                )
-                extract_data_from_text(text_act, data_fields, data_get_functions, data, injectivity)
+        extract_data_from_text(text_act, data_fields, data_get_functions, data, injectivity)
 
         for key, value in data.items():
             if not value:

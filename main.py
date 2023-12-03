@@ -15,7 +15,7 @@ if __name__ == '__main__':
         os.path.join('results', 'single_test.xlsx'),
         'HES',
         log=True,
-        is_docx=True
+        is_docx=False
     )
 
     # data_to_excel(

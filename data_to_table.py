@@ -2,7 +2,7 @@ from os.path import join as path_join
 
 from act_variables import COLUMNS_VDS, DATA_FIELDS_VDS, DATA_GET_FUNCTIONS_VDS, COLUMNS_HES, DATA_FIELDS_HES, \
     DATA_GET_FUNCTIONS_HES
-from data_from_pdf import get_data_from_pdf
+from data_from_pdf import get_data_from_text
 from data_from_pdf_table import get_data_from_pdf_table
 
 
@@ -35,14 +35,13 @@ def data_to_excel(
     else:
         raise AttributeError("act_kind must be 'VDS' or 'HES'")
 
-    text_data = get_data_from_pdf(
+    text_data = get_data_from_text(
         dir_path,
         columns,
         data_fields,
         data_get_functions,
         act_kind,
         log=log,
-        is_docx=is_docx
     )
     if not is_docx:
         table_data = get_data_from_pdf_table(dir_path, log=log)

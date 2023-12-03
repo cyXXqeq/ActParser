@@ -20,10 +20,10 @@ def get_resource_consumption(tables: list[list[list]]) -> DataFrame:
     start = 0
     df = DataFrame()
 
-    for table in tables:
-        for row in table:
-            print(row)
-        print('\n')
+    # for table in tables:
+    #     for row in table:
+    #         print(row)
+    #     print('\n')
 
     for i, table in enumerate(tables):
         if {'Материал (реагент)', 'Количество'}.issubset(table[0]):
