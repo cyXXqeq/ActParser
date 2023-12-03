@@ -13,7 +13,7 @@ if __name__ == '__main__':
     data_to_excel(
         os.path.join('documents', 'single_test'),
         os.path.join('results', 'single_test.xlsx'),
-        'HES',
+        'VDS',
         log=True,
         is_docx=False
     )

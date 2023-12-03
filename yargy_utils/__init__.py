@@ -67,3 +67,5 @@ ID_TOKENIZER = IdTokenizer(TOKENIZER)
 
 VALUE_RULE = rule(or_(DECIMAL, rule(INT)), UNIT)
 VALUE_OPT_RULE = rule(or_(DECIMAL, rule(INT)), UNIT.optional())
+
+RBM_RULE = morph_pipeline(['РБМ', 'РБМ-10', 'РБМ 10'])

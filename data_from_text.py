@@ -1,6 +1,4 @@
 from collections import namedtuple
-from os import listdir
-from os.path import join as path_join, isdir
 
 import pandas as pd
 from yargy import rule, or_
@@ -689,7 +687,7 @@ def extract_data_from_text(text_act, data_fields, data_get_functions, data, inje
 
 
 def get_data_from_text(
-        dir_path: str,
+        paths: list[str],
         columns: list[str],
         data_fields: list[str],
         data_get_functions: list,
@@ -698,18 +696,15 @@ def get_data_from_text(
 ) -> pd.DataFrame:
     """
 
-    :param dir_path: path to dir containing documents
+    :param paths: список путей к документам
     :param columns: столбцы конкретного типа акта
     :param data_fields: ключи столбцов в словаре
     :param data_get_functions: функции для получения информации из текста
     :param act_kind: VDS or HES
     :param log: output log if true
-    :param is_docx: docx file if True, else pdf file
     :return:
     """
 
-    paths = [path_join(dir_path, file) for file in listdir(dir_path)]
-    paths = list(filter(lambda x: not isdir(x), paths))
     df = pd.DataFrame(columns=columns)
 
     for path in paths:
