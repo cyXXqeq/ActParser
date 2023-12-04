@@ -10,9 +10,17 @@ if __name__ == '__main__':
     docx_paths = [os.path.join('documents', path, '2015_ворд') for path in paths]
     start = time.time()
 
+    # data_to_excel(
+    #     os.path.join('documents', 'test'),
+    #     os.path.join('results', 'test.xlsx'),
+    #     'VDS',
+    #     log=True,
+    #     is_docx=False
+    # )
+
     data_to_excel(
-        os.path.join('documents', 'single_test'),
-        os.path.join('results', 'single_test.xlsx'),
+        os.path.join('documents', 'ВДС_РБМ'),
+        os.path.join('results', 'vds_rbm.xlsx'),
         'VDS',
         log=True,
         is_docx=False

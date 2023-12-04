@@ -2,7 +2,7 @@ from os import listdir
 from os.path import join as path_join, isdir
 
 from act_variables import COLUMNS_VDS, DATA_FIELDS_VDS, DATA_GET_FUNCTIONS_VDS, COLUMNS_HES, DATA_FIELDS_HES, \
-    DATA_GET_FUNCTIONS_HES
+    DATA_GET_FUNCTIONS_HES, COLUMNS_VDS_RBM, DATA_FIELDS_VDS_RBM, DATA_GET_FUNCTIONS_VDS_RBM
 from data_from_text import get_data_from_text
 from data_from_pdf_table import get_data_from_pdf_table
 from utils.split_vds import split_vds_by_rbm
@@ -34,7 +34,7 @@ def data_to_excel(
 
     if act_kind == 'VDS':
         if check_rbm:
-            rbm, not_rbm = split_vds_by_rbm(paths)
+            rbm, not_rbm = split_vds_by_rbm(paths, log)
             if rbm:
                 data_to_excel(
                     rbm,
@@ -44,22 +44,24 @@ def data_to_excel(
                     is_docx,
                     False
                 )
-                data_to_excel(
-                    not_rbm,
-                    table_path.replace('.xlsx', '_not_rbm.xlsx'),
-                    'VDS',
-                    log,
-                    is_docx,
-                    False
-                )
+                if not_rbm:
+                    data_to_excel(
+                        not_rbm,
+                        table_path.replace('.xlsx', '_not_rbm.xlsx'),
+                        'VDS',
+                        log,
+                        is_docx,
+                        False
+                    )
                 return
         columns = COLUMNS_VDS
         data_fields = DATA_FIELDS_VDS
         data_get_functions = DATA_GET_FUNCTIONS_VDS
 
     elif act_kind == 'RBM':
-        print('rbm')
-        return
+        columns = COLUMNS_VDS_RBM
+        data_fields = DATA_FIELDS_VDS_RBM
+        data_get_functions = DATA_GET_FUNCTIONS_VDS_RBM
 
     elif act_kind == 'HES':
         columns = COLUMNS_HES

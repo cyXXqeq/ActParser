@@ -18,6 +18,17 @@ def fill_data_list(data, inj_processed, act_kind):
             data['squeeze_final'].value
         ]
 
+    elif act_kind == 'RBM':
+        data_list += [
+            data['process_solution'].value,
+            data['rbm'].value1,
+            data['rbm'].value2,
+            data['rbm'].value3,
+            data['squeeze_in_process'].value,
+            data['injection_pressure'].value,
+            data['squeeze_final'].value
+        ]
+
     elif act_kind == 'HES':
         data_list += [
             data['primary_solution'].value,

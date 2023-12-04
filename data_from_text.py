@@ -18,9 +18,15 @@ from yargy_utils.get_value import get_field_value, get_field_value_with_skip
 
 NoneTuple = namedtuple(
     'NoneTuple',
-    ['value', 'volume', 'concentration', 'mass', 'speed', 'field_name', 'neftenol', 'waste_water']
+    [
+        'value', 'volume', 'concentration', 'mass', 'speed',
+        'field_name', 'neftenol', 'waste_water', 'value1',
+        'value2', 'value3'
+    ]
 )
-none_tuple = NoneTuple(None, None, None, None, None, None, None, None)
+none_tuple = NoneTuple(
+    None, None, None, None, None, None, None, None, None, None, None
+)
 
 
 def get_well_number(text: str):
@@ -597,6 +603,54 @@ def get_squeeze(text: str):
         )
 
 
+def get_rbm(text: str):
+    Rbm = fact(
+        'Rbm',
+        ['value1', 'value2', 'value3']
+    )
+    rbm_rule = rule(
+        morph_pipeline(['концентрация']),
+        morph_pipeline(['РБМ-10', 'РБМ']),
+        DASH.optional(),
+        rule(
+            INTORDEC,
+            PERCENT.optional(),
+            DASH.optional(),
+            INTORDEC.optional(),
+            PERCENT.optional(),
+            DASH.optional(),
+            INTORDEC.optional(),
+            PERCENT.optional()
+        ).interpretation(Rbm.value1)
+    ).interpretation(Rbm)
+    result = get_field_value(rbm_rule, text)
+    if result:
+        values = result.value1.replace('%', '').split('-')
+        result.value1 = values[0]
+        if len(values) >= 2:
+            result.value2 = values[1]
+        if len(values) >= 3:
+            result.value3 = values[2]
+    return result
+
+
+def get_squeeze_in_process(text: str):
+    SqueezeInProcess = fact(
+        'SqueezeInProcess',
+        ['value']
+    )
+    squeeze_in_process_rule = rule(
+        morph_pipeline(['продавка']),
+        PREP,
+        morph_pipeline(['процесс']),
+        morph_pipeline(['закачка']),
+        PREP,
+        VOLUME,
+        VALUE_RULE.interpretation(SqueezeInProcess.value)
+    ).interpretation(SqueezeInProcess)
+    return get_field_value(squeeze_in_process_rule, text)
+
+
 def get_injection_pressure(text: str):
     """
 
@@ -613,12 +667,38 @@ def get_injection_pressure(text: str):
         morph_pipeline(['Pзак', 'Рзак']),
         EQUAL_SIGN,
         rule(
-            INT, DASH, INT, rule(DASH, INT).optional(), UNIT
+            INT,
+            SLASH.optional(),
+            rule(INT).optional(),
+            rule(DASH, INT).optional(),
+            rule(DASH, INT).optional(),
+            UNIT
         ).interpretation(InjectionPressure.value)
     ).interpretation(InjectionPressure)
 
-    return (get_field_value(injection_pressure_rule, text)
-            or get_field_value(injection_pressure_rule, text, lines=False))
+    inj_word = morph_pipeline(['Рдоп', 'Pдоп'])
+    injection_pressure_rule_2 = rule(
+        VALUE_RULE.interpretation(InjectionPressure.value)
+    )
+
+    result = (get_field_value(injection_pressure_rule, text) or
+              get_field_value(injection_pressure_rule, text, lines=False))
+
+    if not result:
+        extract_text = get_field_value_with_skip(
+            or_(
+                inj_word, injection_pressure_rule_2
+            ),
+            text,
+            lines=False
+        )
+        result = get_field_value(
+            rule(
+                inj_word, injection_pressure_rule_2
+            ).interpretation(InjectionPressure),
+            extract_text
+        )
+    return result
 
 
 def get_squeeze_final(text: str):

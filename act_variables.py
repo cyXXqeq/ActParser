@@ -11,6 +11,8 @@ from data_from_text import (
     get_squeeze,
     get_injection_pressure,
     get_squeeze_final,
+    get_squeeze_in_process,
+    get_rbm
 )
 
 COLUMNS_VDS = [
@@ -47,6 +49,34 @@ DATA_GET_FUNCTIONS_VDS = [
     get_buffer,
     get_wood_flour,
     get_squeeze,
+    get_injection_pressure,
+    get_squeeze_final,
+]
+COLUMNS_VDS_RBM = [
+    'Скважина',
+    'Приемистость скважины на 1-й скорости',
+    'Приемистость скважины на 2-й скорости',
+    'Приемистость скважины на 3-й скорости',
+    'Объем технонологического раствора',
+    'Концентрация РБМ 1-ая оторочка',
+    'Концентрация РБМ 2-ая оторочка',
+    'Концентрация РБМ 3-ая оторочка',
+    'Продавка в процессе закачки',
+    'Давление закачки',
+    'Объем финальной продавки',
+    'Приемистость скважины на 1-й скорости после закачки',
+    'Приемистость скважины на 2-й скорости после закачки',
+    'Приемистость скважины на 3-й скорости после закачки',
+]
+DATA_FIELDS_VDS_RBM = [
+    'well', 'process_solution', 'rbm', 'squeeze_in_process',
+    'injection_pressure', 'squeeze_final'
+]
+DATA_GET_FUNCTIONS_VDS_RBM = [
+    get_well_number,
+    get_process_solution,
+    get_rbm,
+    get_squeeze_in_process,
     get_injection_pressure,
     get_squeeze_final,
 ]
