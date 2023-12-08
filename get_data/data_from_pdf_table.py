@@ -104,4 +104,4 @@ def get_data_from_pdf_table(paths: list[str], log: bool = False):
 
 
 if __name__ == '__main__':
-    get_data_from_pdf_table(path_join('documents', 'single_test'), log=True)
+    get_data_from_pdf_table(path_join('../documents', 'single_test'), log=True)

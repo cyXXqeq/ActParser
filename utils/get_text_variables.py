@@ -1,6 +1,6 @@
 from copy import copy
 
-from act_variables import *
+from utils.act_variables import *
 
 
 def get_variables(act_kind: str, is_docx: bool = False):

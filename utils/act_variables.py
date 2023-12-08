@@ -1,4 +1,4 @@
-from data_from_text import (
+from get_data.data_from_text import (
     get_well_number,
     get_cycle_count,
     get_process_solution,

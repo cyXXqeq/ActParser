@@ -1,8 +1,8 @@
 from os import listdir
 from os.path import join as path_join, isdir
 
-from data_from_pdf_table import get_data_from_pdf_table
-from data_from_text import get_data_from_text
+from get_data.data_from_pdf_table import get_data_from_pdf_table
+from get_data.data_from_text import get_data_from_text
 from utils.clean_null_acts import clean_df
 from utils.get_text_variables import get_variables
 from utils.split_vds import split_vds_by_rbm
