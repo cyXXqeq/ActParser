@@ -1,62 +1,46 @@
-import os.path
-import time
+import argparse
+import logging
+import os
 
 from data_to_table import data_to_excel
 
-if __name__ == '__main__':
-    root_path = os.path.join('/', 'home', 'cyxxqeq', 'PycharmProjects', 'ActParser')
-    paths = ['АЗН', 'АН', 'ДЖ']
-    pdf_paths = [os.path.join('documents', path) for path in paths]
-    docx_paths = [os.path.join('documents', path, '2015_ворд') for path in paths]
-    start = time.time()
 
-    # data_to_excel(
-    #     os.path.join('documents', 'test'),
-    #     os.path.join('results', 'test.xlsx'),
-    #     'VDS',
-    #     log=True,
-    #     is_docx=False
-    # )
+def files_is_docx(dir_path):
+    files = os.listdir(dir_path)
+    file_extensions = ''
+    for file in files:
+        if not file_extensions:
+            file_extensions = file.lower().split('.')[-1]
+        if not file.lower().endswith(file_extensions):
+            raise AttributeError('Files in directory must be only pdf or only docx')
+    return file_extensions == 'docx'
 
-    data_to_excel(
-        os.path.join('documents', 'ВДС_РБМ'),
-        os.path.join('results', 'vds_rbm.xlsx'),
-        'VDS',
-        log=True,
-        is_docx=False
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Парсер актов, берет информацию из документов '
+                    'расположенных в папке и заполняет таблицу. '
+                    'Поддерживает ВДС, ВДС РБМ и ГЭР акты.'
+                    'В одной папке с актамы должны быть файлы только pdf или docx, '
+                    'если в одной папке будут и pdf и docx файлы, программа '
+                    'отработает некорректно'
     )
 
-    # data_to_excel(
-    #     os.path.join('documents', 'ВДС'),
-    #     os.path.join('results', 'vds_result.xlsx'),
-    #     'VDS',
-    #     log=True,
-    #     is_docx=False
-    # )
+    parser.add_argument('input_dir', help='Путь к папке с актами')
+    parser.add_argument('output_table', help='Путь к итоговой таблице')
+    parser.add_argument('document_type', help='Тип документа: VDS для ВДС и HES для ГЭР, '
+                                              'с другими параметрами работать не будет')
+    parser.add_argument('--enable_logs', action='store_true', help='Включить логи')
 
-    # data_to_excel(
-    #     os.path.join('documents', 'fix_vds'),
-    #     os.path.join('results', 'fix_vds.xlsx'),
-    #     'VDS',
-    #     log=True,
-    #     is_docx=False
-    # )
+    args = parser.parse_args()
+    args.document_type = args.document_type.upper()
+    is_docx = files_is_docx(args.input_dir)
+    if not args.output_table.lower().endswith('.xlsx'):
+        args.output_table += '.xlsx'
+    if args.enable_logs:
+        logging.disable(logging.NOTSET)
+    data_to_excel(args.input_dir, args.output_table, args.document_type, args.enable_logs, is_docx)
 
-    # for path, name in zip(pdf_paths, paths):
-    #     data_to_excel(
-    #         path,
-    #         os.path.join('results', f'{name}.xlsx'),
-    #         'HES',
-    #         log=True,
-    #         is_docx=False
-    #     )
-    # for path, name in zip(docx_paths, paths):
-    #     data_to_excel(
-    #         path,
-    #         os.path.join('results', f'{name}_docx.xlsx'),
-    #         'HES',
-    #         log=True,
-    #         is_docx=True
-    #     )
-    end = time.time()
-    print('execute time: ', end - start)
+
+if __name__ == '__main__':
+    main()

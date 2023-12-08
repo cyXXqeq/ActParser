@@ -70,10 +70,7 @@ def get_data_from_pdf_table(paths: list[str], log: bool = False):
     df = DataFrame(columns=columns)
 
     for path in paths:
-
-        if log:
-            print(f'[INFO] path: {path}')
-
+        print(f'[INFO] path: {path}')
         cv = Converter(path)
         tables = cv.extract_tables()
         cv.close()

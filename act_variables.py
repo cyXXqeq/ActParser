@@ -12,11 +12,18 @@ from data_from_text import (
     get_injection_pressure,
     get_squeeze_final,
     get_squeeze_in_process,
-    get_rbm
+    get_rbm,
+    get_ngdu,
+    get_dates,
+    get_area
 )
 
 COLUMNS_VDS = [
     'Скважина',
+    'Площадь',
+    'НГДУ',
+    'Дата начала ремонта',
+    'Дата окончания ремонта',
     'Приемистость скважины на 1-й скорости',
     'Приемистость скважины на 2-й скорости',
     'Приемистость скважины на 3-й скорости',
@@ -37,12 +44,15 @@ COLUMNS_VDS = [
     'Приемистость скважины на 3-й скорости после закачки',
 ]
 DATA_FIELDS_VDS = [
-    'well', 'cycle_count', 'process_solution',
+    'well', 'area', 'ngdu', 'dates', 'cycle_count', 'process_solution',
     'clay_powder', 'buffer', 'wood_flour', 'squeeze',
     'injection_pressure', 'squeeze_final'
 ]
 DATA_GET_FUNCTIONS_VDS = [
     get_well_number,
+    get_area,
+    get_ngdu,
+    get_dates,
     get_cycle_count,
     get_process_solution,
     get_clay_powder,
@@ -54,6 +64,10 @@ DATA_GET_FUNCTIONS_VDS = [
 ]
 COLUMNS_VDS_RBM = [
     'Скважина',
+    'Площадь',
+    'НГДУ',
+    'Дата начала ремонта',
+    'Дата окончания ремонта',
     'Приемистость скважины на 1-й скорости',
     'Приемистость скважины на 2-й скорости',
     'Приемистость скважины на 3-й скорости',
@@ -69,11 +83,14 @@ COLUMNS_VDS_RBM = [
     'Приемистость скважины на 3-й скорости после закачки',
 ]
 DATA_FIELDS_VDS_RBM = [
-    'well', 'process_solution', 'rbm', 'squeeze_in_process',
+    'well', 'area', 'ngdu', 'dates', 'process_solution', 'rbm', 'squeeze_in_process',
     'injection_pressure', 'squeeze_final'
 ]
 DATA_GET_FUNCTIONS_VDS_RBM = [
     get_well_number,
+    get_area,
+    get_ngdu,
+    get_dates,
     get_process_solution,
     get_rbm,
     get_squeeze_in_process,
@@ -82,6 +99,10 @@ DATA_GET_FUNCTIONS_VDS_RBM = [
 ]
 COLUMNS_HES = [
     'Скважина',
+    'Площадь',
+    'НГДУ',
+    'Дата начала ремонта',
+    'Дата окончания ремонта',
     'Приемистость скважины на 1-й скорости',
     'Приемистость скважины на 2-й скорости',
     'Приемистость скважины на 3-й скорости',
@@ -97,11 +118,14 @@ COLUMNS_HES = [
     'Приемистость скважины на 3-й скорости после закачки',
 ]
 DATA_FIELDS_HES = [
-    'well', 'primary_solution', 'neftenol_waste_water',
+    'well', 'area', 'ngdu', 'dates', 'primary_solution', 'neftenol_waste_water',
     'hes', 'injection_pressure', 'squeeze_final'
 ]
 DATA_GET_FUNCTIONS_HES = [
     get_well_number,
+    get_area,
+    get_ngdu,
+    get_dates,
     get_primary_solution,
     get_neftenol_and_waste_water,
     get_hes,

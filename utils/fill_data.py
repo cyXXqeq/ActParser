@@ -1,5 +1,14 @@
-def fill_data_list(data, inj_processed, act_kind):
+def fill_data_list(data, inj_processed, act_kind, is_docx: bool = False):
     data_list = [data['well'].value]
+    if not is_docx:
+        data_list += [
+            data['area'].value,
+            data['ngdu'].value,
+        ]
+    data_list += [
+        data['dates'].value1,
+        data['dates'].value2,
+    ]
     data_list += inj_processed[:3]
 
     if act_kind == 'VDS':

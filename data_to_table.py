@@ -1,10 +1,10 @@
 from os import listdir
 from os.path import join as path_join, isdir
 
-from act_variables import COLUMNS_VDS, DATA_FIELDS_VDS, DATA_GET_FUNCTIONS_VDS, COLUMNS_HES, DATA_FIELDS_HES, \
-    DATA_GET_FUNCTIONS_HES, COLUMNS_VDS_RBM, DATA_FIELDS_VDS_RBM, DATA_GET_FUNCTIONS_VDS_RBM
-from data_from_text import get_data_from_text
 from data_from_pdf_table import get_data_from_pdf_table
+from data_from_text import get_data_from_text
+from utils.clean_null_acts import clean_df
+from utils.get_text_variables import get_variables
 from utils.split_vds import split_vds_by_rbm
 
 
@@ -34,7 +34,7 @@ def data_to_excel(
 
     if act_kind == 'VDS':
         if check_rbm:
-            rbm, not_rbm = split_vds_by_rbm(paths, log)
+            rbm, not_rbm = split_vds_by_rbm(paths)
             if rbm:
                 data_to_excel(
                     rbm,
@@ -54,35 +54,24 @@ def data_to_excel(
                         False
                     )
                 return
-        columns = COLUMNS_VDS
-        data_fields = DATA_FIELDS_VDS
-        data_get_functions = DATA_GET_FUNCTIONS_VDS
 
-    elif act_kind == 'RBM':
-        columns = COLUMNS_VDS_RBM
-        data_fields = DATA_FIELDS_VDS_RBM
-        data_get_functions = DATA_GET_FUNCTIONS_VDS_RBM
+    columns, data_fields, data_get_functions = get_variables(act_kind, is_docx)
 
-    elif act_kind == 'HES':
-        columns = COLUMNS_HES
-        data_fields = DATA_FIELDS_HES
-        data_get_functions = DATA_GET_FUNCTIONS_HES
-
-    else:
-        raise AttributeError("act_kind must be 'VDS' or 'HES'")
-
+    print('[INFO] get data from text')
     text_data = get_data_from_text(
         paths,
         columns,
         data_fields,
         data_get_functions,
         act_kind,
-        log=log,
+        is_docx=is_docx
     )
     if not is_docx:
+        print('[INFO] get data from pdf tables')
         table_data = get_data_from_pdf_table(paths, log=log)
         text_data = text_data.join(table_data)
 
+    text_data = clean_df(text_data)
     text_data.to_excel(table_path)
 
 

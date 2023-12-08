@@ -12,7 +12,7 @@ from utils.get_text import text_from_pdf
 from yargy_utils import (
     NUMERO_SIGN, INT, PREP, COLON, EQUAL_SIGN, PERCENT, DOT, UNIT,
     DECIMAL, VOLUME, DASH, OPEN_BRACKET, CLOSE_BRACKET, SLASH, CONJ,
-    INTORDEC, PLUS, ANY_LETTER, VALUE_RULE, VALUE_OPT_RULE
+    INTORDEC, PLUS, ANY_LETTER, VALUE_RULE, VALUE_OPT_RULE, show_matches, QUOT, NOUN, ADJF, SEMICOLON
 )
 from yargy_utils.get_value import get_field_value, get_field_value_with_skip
 
@@ -91,7 +91,7 @@ def get_injectivity(text: str):
     # result = get_field_value(injectivity_rule, text, all_match=True, remainder=True)
     result = get_field_value(injectivity_rule, text, lines=False, all_match=True)
     for i, res in enumerate(result):
-        result[i].speed = res.field_name.split()[0]
+        result[i].speed = res.field_name[0]
         # value = res.value.replace(';', '').replace('.', '').replace('приемистость:', '').replace('(сid:9)', '')
         # value = ' '.join(value.split())
         # result[i].value = value
@@ -413,17 +413,26 @@ def get_primary_solution(text: str):
 def get_neftenol_and_waste_water(text: str):
     NeftenolWasteWater = fact(
         'NeftenolWasteWater',
-        ['neftenol', 'waste_water']
+        ['neftenol', 'waste_water', 'value']
     )
 
-    solution_rule = rule(
-        morph_pipeline(['первичный']),
-        morph_pipeline(['раствор'])
+    solution_rule = or_(
+        rule(
+            morph_pipeline(['первичный']),
+            morph_pipeline(['раствор'])
+        ),
+        or_(
+            rule(
+                morph_pipeline(['гидрофобный']),
+                morph_pipeline(['эмульсия'])
+            ),
+            morph_pipeline(['ГЭР'])
+        )
     )
 
     neftenol_rule = rule(
         OPEN_BRACKET.optional(),
-        morph_pipeline(['Нефтенол'])
+        morph_pipeline(['Нефтенол', 'НЗ-ТАТ', 'НЗ ТАТ'])
     )
 
     waste_water_rule = rule(
@@ -453,16 +462,22 @@ def get_neftenol_and_waste_water(text: str):
         rule(
             VALUE_OPT_RULE,
             or_(neftenol_rule, waste_water_rule)
-        )
+        ),
+        morph_pipeline(['мерник'])
     )
 
     neftenol_waste_water_rule_2 = rule(
-        morph_pipeline(['первичный']),
-        morph_pipeline(['раствор']),
+        # morph_pipeline(['первичный']),
+        # morph_pipeline(['раствор']),
+        solution_rule,
         VALUE_OPT_RULE.interpretation(NeftenolWasteWater.neftenol),
         neftenol_rule,
         VALUE_OPT_RULE.interpretation(NeftenolWasteWater.waste_water),
-        waste_water_rule
+        waste_water_rule,
+        rule(
+            VALUE_OPT_RULE.interpretation(NeftenolWasteWater.value),
+            waste_water_rule
+        ).optional()
     ).interpretation(NeftenolWasteWater)
 
     extract_text = get_field_value_with_skip(
@@ -471,8 +486,18 @@ def get_neftenol_and_waste_water(text: str):
         lines=False,
         first_value=False
     )
+    result = get_field_value(neftenol_waste_water_rule_2, extract_text)
+    if result and result.value:
+        if 'м' in result.value:
+            result.value = result.value[:-3]
+        value = float(result.value.replace(' ', '').replace(',', '.'))
+        if 'м' in result.waste_water:
+            result.waste_water = result.waste_water[:-3]
+        waste = float(result.waste_water.replace(' ', '').replace(',', '.'))
+        waste += value
+        result.waste_water = f'{waste} м 3'
 
-    return get_field_value(neftenol_waste_water_rule_2, extract_text)
+    return result
 
 
 def get_hes(text: str):
@@ -757,6 +782,70 @@ def get_squeeze_final(text: str):
     )
 
 
+def get_ngdu(text: str):
+    Ngdu = fact(
+        'Ngdu',
+        ['value']
+    )
+    ngdu_rule = rule(
+        morph_pipeline(['НГДУ']),
+        QUOT,
+        NOUN,
+        QUOT
+    ).interpretation(Ngdu.value).interpretation(Ngdu)
+    return get_field_value(ngdu_rule, text)
+
+
+def get_dates(text: str):
+    Dates = fact(
+        'Dates',
+        ['value1', 'value2']
+    )
+    date_rule = rule(
+        INT,
+        SLASH,
+        INT,
+        SLASH,
+        INT
+    )
+    dates_rule = rule(
+        date_rule.interpretation(Dates.value1),
+        or_(
+            rule(SLASH),
+            rule(
+                SEMICOLON,
+                morph_pipeline(['дата']),
+                morph_pipeline(['окончание']),
+                morph_pipeline(['ремонт']),
+                COLON
+            )
+        ),
+        date_rule.interpretation(Dates.value2)
+    ).interpretation(Dates)
+    return get_field_value(dates_rule, text)
+
+
+def get_area(text: str):
+    Area = fact(
+        'Area',
+        ['value']
+    )
+    area_rule = rule(
+        or_(
+            rule(ADJF),
+            rule(
+                morph_pipeline(['Залежь']),
+                NUMERO_SIGN,
+                INT
+            )
+        ).interpretation(Area.value),
+        morph_pipeline(['Месторождение', 'Площадь']),
+        COLON,
+        morph_pipeline(['Площадь', 'Месторождение'])
+    ).interpretation(Area)
+    return get_field_value(area_rule, text)
+
+
 def extract_data_from_text(text_act, data_fields, data_get_functions, data, injectivity):
     text_act = text_act.replace('c', 'с').replace('o', 'о')
     injectivity += get_injectivity(text_act)
@@ -772,7 +861,7 @@ def get_data_from_text(
         data_fields: list[str],
         data_get_functions: list,
         act_kind: str,
-        log: bool = False,
+        is_docx: bool = False
 ) -> pd.DataFrame:
     """
 
@@ -782,16 +871,14 @@ def get_data_from_text(
     :param data_get_functions: функции для получения информации из текста
     :param act_kind: VDS or HES
     :param log: output log if true
+    :param is_docx: True if docx False else
     :return:
     """
 
     df = pd.DataFrame(columns=columns)
 
     for path in paths:
-
-        if log:
-            print(f'[INFO] path: {path}')
-
+        print(f'[INFO] path: {path}')
         data: dict[str, None | NoneTuple | Fact] = {field: None for field in data_fields}
         injectivity = []
 
@@ -801,8 +888,7 @@ def get_data_from_text(
             case 'pdf':
                 text_act = text_from_pdf(path)
             case other:
-                if log:
-                    print(f'[INFO] filetype "{other}" not supported')
+                print(f'[INFO] filetype "{other}" not supported')
                 continue
 
         extract_data_from_text(text_act, data_fields, data_get_functions, data, injectivity)
@@ -826,10 +912,36 @@ def get_data_from_text(
                 inj_processed[i] = None
                 i += 1
 
-        data_list = fill_data_list(data, inj_processed, act_kind)
+        data_list = fill_data_list(data, inj_processed, act_kind, is_docx=is_docx)
 
         df.loc[len(df)] = data_list
 
     df = df.fillna(value='н/д')
 
     return df
+
+
+if __name__ == '__main__':
+    test_text = '''
+    22.07.2019 13:20
+АКТ НА СДАЧУ СКВАЖИНЫ ИЗ КАПИТАЛЬНОГО РЕМОНТА
+Скв № 2789
+ООО "ТаграС-РемСервис", ООО "ТаграС-ХимСервис", Цех повыш-я нефтеотдачи пластов, Бригада №2 Подрядчик предприятие
+НГДУ "Азнакаевскнефть", ЦППД №9, Бр. №2 Заказчик :
+Нагнетательная / Нагнетательная Назначение скважины : до / после
+Закачка по НКТ / Закачка по НКТ Способ эксплуатации: до / после
+14/06/2019 / 16/06/2019 Начало / оконч. ремонта: Подъемник :
+Рем.№ 1 Ромашкинское Азнакаевская Месторождение : Площадь :
+ПНП 18/06/2019 Признак Акт принят :
+планируется Признак расчета доп. добычи :
+Чалпинский Наименование СМС :
+92202876000 Код ОКАТО :
+    '''
+    print(get_ngdu(test_text))
+    print(get_dates(test_text))
+    print(get_area(test_text))
+    print(get_dates(
+        '''Описание работ по скв.:  2893 ; цех: 9; дата начала ремонта: 23/06/2015; дата окончания ремонта: 24/06/2015
+
+Произвели подготовительные работы. '''
+    ))

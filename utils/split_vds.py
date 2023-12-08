@@ -5,12 +5,11 @@ from yargy_utils import RBM_RULE
 from yargy_utils.get_value import get_field_value_with_skip
 
 
-def split_vds_by_rbm(paths: list[str], log: bool = False):
+def split_vds_by_rbm(paths: list[str]):
     rbm = []
     not_rbm = []
     for path in paths:
-        if log:
-            print(f'[INFO] check rbm in {path}')
+        print(f'[INFO] check rbm in {path}')
         text = ''
         match path.split('.')[-1].lower():
             case 'pdf':
@@ -21,10 +20,9 @@ def split_vds_by_rbm(paths: list[str], log: bool = False):
                         use_text_flow=True
                     )
             case 'docx':
-                text = text_from_docx
+                text = text_from_docx(path)
             case other:
-                if log:
-                    print(f'[INFO] filetype "{other}" not supported')
+                print(f'[INFO] filetype "{other}" not supported')
                 continue
         if get_field_value_with_skip(RBM_RULE, text):
             rbm.append(path)
