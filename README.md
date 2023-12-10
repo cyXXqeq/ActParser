@@ -23,3 +23,6 @@
 Вывести информационное сообщение:
 `poetry run python main.py --help`
 
+Запуск на тестовых данных:
+`poetry run python main.py test_docs test_reslut/test.xlsx vds`
+
