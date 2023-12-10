@@ -21,5 +21,5 @@
 `[--enable_logs]` - включить логи всех работающих библиотек
 
 Вывести информационное сообщение:
-`python main.py --help`
+`poetry run python main.py --help`
 
